@@ -35,7 +35,20 @@ const GameBoard: React.FC<GameBoardProps> = ({
   };
 
   return (
-    <div className="w-screen h-screen fixed inset-0 overflow-hidden bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 relative flex items-center justify-center">
+    <div className="w-screen h-screen fixed inset-0 overflow-hidden bg-gradient-to-b from-blue-800 via-blue-900 to-blue-950 flex items-center justify-center">
+      {/* Background Pattern - Match Welcome Screen */}
+      <div className="absolute inset-0 opacity-30">
+        <div className="absolute inset-0 bg-gradient-radial from-blue-600/20 to-transparent"></div>
+        {/* Dotted pattern overlay - responsive sizing */}
+        <div 
+          className="absolute inset-0 opacity-40"
+          style={{
+            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)',
+            backgroundSize: 'clamp(20px, 4vw, 40px) clamp(20px, 4vw, 40px)'
+          }}
+        ></div>
+      </div>
+
       {/* Enhanced Game Show Background Effects - Responsive */}
       <div className="absolute inset-0">
         {/* Animated Spotlight Effects - Responsive Sizing */}
@@ -104,28 +117,28 @@ const GameBoard: React.FC<GameBoardProps> = ({
         </div>
       </div>
 
-      {/* Game Content Container - Properly Centered */}
-      <div className="relative z-10 w-full h-full flex flex-col items-center justify-center p-2 sm:p-3 md:p-4 lg:p-6">
+      {/* Game Content Container - Match Welcome Screen Structure */}
+      <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8">
         
         {/* Top Score Display - Centered */}
-        <div className="mb-2 sm:mb-3 md:mb-4 lg:mb-6 flex-shrink-0">
-          <div className="bg-gradient-to-b from-blue-800 to-blue-900 border-2 sm:border-3 md:border-4 lg:border-5 xl:border-6 2xl:border-7 border-gradient-to-r from-orange-400 to-yellow-400 rounded-lg sm:rounded-xl md:rounded-2xl lg:rounded-3xl px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12 2xl:px-16 py-1.5 sm:py-2 md:py-3 lg:py-4 xl:py-5 2xl:py-6 shadow-2xl relative overflow-hidden">
+        <div className="mb-4 sm:mb-6 md:mb-8 flex-shrink-0">
+          <div className="bg-gradient-to-b from-blue-800 to-blue-900 border-2 sm:border-3 md:border-4 border-gradient-to-r from-orange-400 to-yellow-400 rounded-lg sm:rounded-xl md:rounded-2xl px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 shadow-2xl relative overflow-hidden">
             {/* Glow effect behind score */}
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-600/30 to-purple-600/30 rounded-lg sm:rounded-xl md:rounded-2xl lg:rounded-3xl blur-sm"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-600/30 to-purple-600/30 rounded-lg sm:rounded-xl md:rounded-2xl blur-sm"></div>
             
-            <div className="relative text-white font-black text-center drop-shadow-2xl" style={{ fontSize: 'clamp(1.2rem, 4vw, 3rem)' }}>
+            <div className="relative text-white font-black text-center drop-shadow-2xl" style={{ fontSize: 'clamp(1.5rem, 4vw, 3.5rem)' }}>
               {team1Score + team2Score}
             </div>
             
             {/* Decorative border glow */}
-            <div className="absolute inset-0 border-2 border-yellow-300/50 rounded-lg sm:rounded-xl md:rounded-2xl lg:rounded-3xl animate-pulse"></div>
+            <div className="absolute inset-0 border-2 border-yellow-300/50 rounded-lg sm:rounded-xl md:rounded-2xl animate-pulse"></div>
           </div>
         </div>
 
-        {/* Main Answer Board - Centered and Contained */}
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 border-2 sm:border-3 md:border-4 lg:border-5 xl:border-6 2xl:border-7 border-gradient-to-r from-orange-400 via-yellow-400 to-orange-400 rounded-lg sm:rounded-xl md:rounded-2xl lg:rounded-3xl p-2 sm:p-3 md:p-4 lg:p-6 shadow-2xl w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[80vw] xl:w-[75vw] max-w-6xl relative overflow-hidden flex-shrink-0">
+        {/* Main Answer Board - Centered and Properly Sized */}
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 border-2 sm:border-3 md:border-4 border-gradient-to-r from-orange-400 via-yellow-400 to-orange-400 rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-6 shadow-2xl w-full max-w-4xl relative overflow-hidden flex-shrink-0">
           {/* Enhanced Background Effects for TV Show Feel */}
-          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-yellow-500/10 to-orange-500/10 rounded-lg sm:rounded-xl md:rounded-2xl lg:rounded-3xl"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-yellow-500/10 to-orange-500/10 rounded-lg sm:rounded-xl md:rounded-2xl"></div>
           <div className="absolute inset-0 bg-gradient-radial from-transparent via-yellow-400/5 to-transparent"></div>
           
           {/* TV Show Stage Lighting Effects on Answer Board */}
@@ -133,39 +146,39 @@ const GameBoard: React.FC<GameBoardProps> = ({
           <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-full h-0.5 sm:h-1 bg-gradient-to-r from-transparent via-orange-400/60 to-transparent"></div>
           
           {/* Enhanced Corner Lights - Responsive Sizing */}
-          <div className="absolute top-1 sm:top-2 left-1 sm:left-2 w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4 lg:w-5 lg:h-5 bg-gradient-to-br from-yellow-400 to-orange-400 rounded-full animate-pulse shadow-lg border border-yellow-200"></div>
-          <div className="absolute top-1 sm:top-2 right-1 sm:right-2 w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4 lg:w-5 lg:h-5 bg-gradient-to-br from-orange-400 to-red-400 rounded-full animate-pulse shadow-lg border border-orange-200" style={{ animationDelay: '0.5s' }}></div>
-          <div className="absolute bottom-1 sm:bottom-2 left-1 sm:left-2 w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4 lg:w-5 lg:h-5 bg-gradient-to-br from-red-400 to-pink-400 rounded-full animate-pulse shadow-lg border border-red-200" style={{ animationDelay: '1s' }}></div>
-          <div className="absolute bottom-1 sm:bottom-2 right-1 sm:right-2 w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4 lg:w-5 lg:h-5 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full animate-pulse shadow-lg border border-blue-200" style={{ animationDelay: '1.5s' }}></div>
+          <div className="absolute top-2 left-2 w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4 bg-gradient-to-br from-yellow-400 to-orange-400 rounded-full animate-pulse shadow-lg border border-yellow-200"></div>
+          <div className="absolute top-2 right-2 w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4 bg-gradient-to-br from-orange-400 to-red-400 rounded-full animate-pulse shadow-lg border border-orange-200" style={{ animationDelay: '0.5s' }}></div>
+          <div className="absolute bottom-2 left-2 w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4 bg-gradient-to-br from-red-400 to-pink-400 rounded-full animate-pulse shadow-lg border border-red-200" style={{ animationDelay: '1s' }}></div>
+          <div className="absolute bottom-2 right-2 w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full animate-pulse shadow-lg border border-blue-200" style={{ animationDelay: '1.5s' }}></div>
           
           {/* TV Show Brand Corner Accents - Responsive */}
-          <div className="absolute -top-0.5 sm:-top-1 left-1/4 w-4 sm:w-6 md:w-8 h-1 sm:h-1.5 md:h-2 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full opacity-80"></div>
-          <div className="absolute -top-0.5 sm:-top-1 right-1/4 w-4 sm:w-6 md:w-8 h-1 sm:h-1.5 md:h-2 bg-gradient-to-r from-orange-400 to-red-400 rounded-full opacity-80"></div>
+          <div className="absolute -top-0.5 left-1/4 w-6 sm:w-8 md:w-12 h-1 sm:h-1.5 md:h-2 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full opacity-80"></div>
+          <div className="absolute -top-0.5 right-1/4 w-6 sm:w-8 md:w-12 h-1 sm:h-1.5 md:h-2 bg-gradient-to-r from-orange-400 to-red-400 rounded-full opacity-80"></div>
 
-          <div className="relative grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:gap-6">
+          <div className="relative grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
             {answers.map((answer, index) => (
               <div
                 key={index}
-                className={`flex items-center justify-between border-1 sm:border-2 md:border-3 border-white rounded-md sm:rounded-lg md:rounded-xl lg:rounded-2xl p-2 sm:p-3 md:p-4 lg:p-5 transition-all duration-500 cursor-pointer relative overflow-hidden ${
+                className={`flex items-center justify-between border-2 sm:border-3 border-white rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-5 transition-all duration-500 cursor-pointer relative overflow-hidden ${
                   answer.revealed
                     ? 'bg-gradient-to-r from-blue-500 to-blue-600 shadow-xl transform scale-105 border-yellow-300'
                     : 'bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-600 hover:to-blue-700 opacity-90 hover:opacity-100'
                 }`}
-                style={{ minHeight: 'clamp(35px, 4vh, 60px)' }}
+                style={{ minHeight: 'clamp(50px, 6vh, 80px)' }}
                 onClick={() => handleAnswerClick(index)}
               >
                 {/* Glow effect for revealed answers */}
                 {answer.revealed && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-blue-500/20 rounded-md sm:rounded-lg md:rounded-xl lg:rounded-2xl animate-pulse"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-blue-500/20 rounded-lg sm:rounded-xl md:rounded-2xl animate-pulse"></div>
                 )}
                 
                 <div className="flex items-center flex-1 relative z-10">
-                  <span className="text-white text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl font-bold uppercase tracking-wide drop-shadow-lg break-words">
+                  <span className="text-white text-sm sm:text-base md:text-lg lg:text-xl font-bold uppercase tracking-wide drop-shadow-lg break-words">
                     {answer.revealed ? answer.text : `ANSWER ${index + 1}`}
                   </span>
                 </div>
-                <div className="bg-gradient-to-b from-blue-800 to-blue-900 border-l-1 sm:border-l-2 md:border-l-3 border-white px-1.5 sm:px-2 md:px-3 lg:px-4 py-1 sm:py-1.5 md:py-2 ml-2 sm:ml-3 rounded-r-md sm:rounded-r-lg md:rounded-r-xl relative z-10">
-                  <span className="text-white text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl font-black drop-shadow-lg">
+                <div className="bg-gradient-to-b from-blue-800 to-blue-900 border-l-2 sm:border-l-3 border-white px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-3 ml-3 sm:ml-4 rounded-r-lg sm:rounded-r-xl relative z-10">
+                  <span className="text-white text-sm sm:text-base md:text-lg lg:text-xl font-black drop-shadow-lg">
                     {answer.revealed ? answer.points : '0'}
                   </span>
                 </div>
@@ -174,38 +187,38 @@ const GameBoard: React.FC<GameBoardProps> = ({
           </div>
         </div>
 
-        {/* Bottom Section - Team Scores Contained */}
-        <div className="mt-2 sm:mt-3 md:mt-4 lg:mt-6 w-full max-w-5xl px-2 sm:px-4 flex-shrink-0">
-          <div className="grid grid-cols-3 items-center gap-2 sm:gap-3 md:gap-4 lg:gap-6 xl:gap-8">
+        {/* Bottom Section - Team Scores */}
+        <div className="mt-6 sm:mt-8 w-full max-w-6xl px-4 flex-shrink-0">
+          <div className="grid grid-cols-3 items-center gap-4 sm:gap-6 md:gap-8">
             
-            {/* Left Team Score - Responsive */}
-            <div className="bg-gradient-to-br from-blue-800 to-blue-900 border-2 sm:border-3 md:border-4 lg:border-5 xl:border-6 border-gradient-to-r from-yellow-400 to-orange-400 rounded-lg sm:rounded-xl md:rounded-2xl lg:rounded-3xl px-2 sm:px-3 md:px-4 lg:px-6 xl:px-8 py-2 sm:py-3 md:py-4 lg:py-5 xl:py-6 shadow-2xl relative overflow-hidden group transform hover:scale-105 transition-transform duration-300">
+            {/* Left Team Score */}
+            <div className="bg-gradient-to-br from-blue-800 to-blue-900 border-2 sm:border-3 md:border-4 border-gradient-to-r from-yellow-400 to-orange-400 rounded-lg sm:rounded-xl md:rounded-2xl px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-6 shadow-2xl relative overflow-hidden group transform hover:scale-105 transition-transform duration-300">
               {/* Background glow */}
-              <div className="absolute inset-0 bg-gradient-to-br from-yellow-400/15 to-orange-400/15 rounded-lg sm:rounded-xl md:rounded-2xl lg:rounded-3xl"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-yellow-400/15 to-orange-400/15 rounded-lg sm:rounded-xl md:rounded-2xl"></div>
               
-              {/* Corner accent lights - Responsive */}
-              <div className="absolute top-0.5 sm:top-1 left-0.5 sm:left-1 w-1 h-1 sm:w-1.5 sm:h-1.5 md:w-2 md:h-2 lg:w-2.5 lg:h-2.5 xl:w-3 xl:h-3 bg-yellow-400 rounded-full animate-pulse"></div>
-              <div className="absolute bottom-0.5 sm:bottom-1 right-0.5 sm:right-1 w-1 h-1 sm:w-1.5 sm:h-1.5 md:w-2 md:h-2 lg:w-2.5 lg:h-2.5 xl:w-3 xl:h-3 bg-orange-400 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+              {/* Corner accent lights */}
+              <div className="absolute top-1 left-1 w-2 h-2 sm:w-3 sm:h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+              <div className="absolute bottom-1 right-1 w-2 h-2 sm:w-3 sm:h-3 bg-orange-400 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
               
               <div className="text-center relative z-10">
-                <div className="text-yellow-300 font-bold mb-1 sm:mb-1.5 md:mb-2 drop-shadow-lg" style={{ fontSize: 'clamp(0.6rem, 1.5vw, 1.2rem)' }}>TEAM 1</div>
-                <div className="text-white font-black drop-shadow-2xl" style={{ fontSize: 'clamp(1rem, 2.5vw, 2.5rem)' }}>{team1Score}</div>
+                <div className="text-yellow-300 font-bold mb-1 sm:mb-2 drop-shadow-lg" style={{ fontSize: 'clamp(0.8rem, 2vw, 1.5rem)' }}>TEAM 1</div>
+                <div className="text-white font-black drop-shadow-2xl" style={{ fontSize: 'clamp(1.2rem, 3vw, 3rem)' }}>{team1Score}</div>
               </div>
             </div>
 
-            {/* Center Strikes Display - Responsive */}
-            <div className="flex justify-center space-x-1 sm:space-x-1.5 md:space-x-2 lg:space-x-3 xl:space-x-4">
+            {/* Center Strikes Display */}
+            <div className="flex justify-center space-x-2 sm:space-x-3 md:space-x-4">
               {[1, 2, 3].map((strike) => (
                 <div
                   key={strike}
-                  className={`rounded-full flex items-center justify-center border-2 sm:border-3 md:border-4 lg:border-5 transition-all duration-300 relative overflow-hidden ${
+                  className={`rounded-full flex items-center justify-center border-3 sm:border-4 transition-all duration-300 relative overflow-hidden ${
                     strike <= strikes
                       ? 'bg-gradient-to-br from-red-500 to-red-600 border-red-700 text-white shadow-2xl animate-pulse'
                       : 'bg-gradient-to-br from-gray-600 to-gray-700 border-gray-800 text-gray-400'
                   }`}
                   style={{ 
-                    width: 'clamp(1.8rem, 3.5vw, 4rem)', 
-                    height: 'clamp(1.8rem, 3.5vw, 4rem)' 
+                    width: 'clamp(2.5rem, 4vw, 5rem)', 
+                    height: 'clamp(2.5rem, 4vw, 5rem)' 
                   }}
                 >
                   {/* Strike glow effect */}
@@ -213,46 +226,42 @@ const GameBoard: React.FC<GameBoardProps> = ({
                     <div className="absolute inset-0 bg-red-400/30 rounded-full animate-ping"></div>
                   )}
                   
-                  <span className="font-bold relative z-10 drop-shadow-lg" style={{ fontSize: 'clamp(0.7rem, 1.8vw, 1.8rem)' }}>❌</span>
+                  <span className="font-bold relative z-10 drop-shadow-lg" style={{ fontSize: 'clamp(1rem, 2vw, 2.5rem)' }}>❌</span>
                 </div>
               ))}
             </div>
 
-            {/* Right Team Score - Responsive */}
-            <div className="bg-gradient-to-br from-green-800 to-green-900 border-2 sm:border-3 md:border-4 lg:border-5 xl:border-6 border-gradient-to-r from-yellow-400 to-orange-400 rounded-lg sm:rounded-xl md:rounded-2xl lg:rounded-3xl px-2 sm:px-3 md:px-4 lg:px-6 xl:px-8 py-2 sm:py-3 md:py-4 lg:py-5 xl:py-6 shadow-2xl relative overflow-hidden group transform hover:scale-105 transition-transform duration-300">
+            {/* Right Team Score */}
+            <div className="bg-gradient-to-br from-green-800 to-green-900 border-2 sm:border-3 md:border-4 border-gradient-to-r from-yellow-400 to-orange-400 rounded-lg sm:rounded-xl md:rounded-2xl px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-6 shadow-2xl relative overflow-hidden group transform hover:scale-105 transition-transform duration-300">
               {/* Background glow */}
-              <div className="absolute inset-0 bg-gradient-to-br from-yellow-400/15 to-orange-400/15 rounded-lg sm:rounded-xl md:rounded-2xl lg:rounded-3xl"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-yellow-400/15 to-orange-400/15 rounded-lg sm:rounded-xl md:rounded-2xl"></div>
               
-              {/* Corner accent lights - Responsive */}
-              <div className="absolute top-0.5 sm:top-1 right-0.5 sm:right-1 w-1 h-1 sm:w-1.5 sm:h-1.5 md:w-2 md:h-2 lg:w-2.5 lg:h-2.5 xl:w-3 xl:h-3 bg-yellow-400 rounded-full animate-pulse"></div>
-              <div className="absolute bottom-0.5 sm:bottom-1 left-0.5 sm:left-1 w-1 h-1 sm:w-1.5 sm:h-1.5 md:w-2 md:h-2 lg:w-2.5 lg:h-2.5 xl:w-3 xl:h-3 bg-orange-400 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+              {/* Corner accent lights */}
+              <div className="absolute top-1 right-1 w-2 h-2 sm:w-3 sm:h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+              <div className="absolute bottom-1 left-1 w-2 h-2 sm:w-3 sm:h-3 bg-orange-400 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
               
               <div className="text-center relative z-10">
-                <div className="text-yellow-300 font-bold mb-1 sm:mb-1.5 md:mb-2 drop-shadow-lg" style={{ fontSize: 'clamp(0.6rem, 1.5vw, 1.2rem)' }}>TEAM 2</div>
-                <div className="text-white font-black drop-shadow-2xl" style={{ fontSize: 'clamp(1rem, 2.5vw, 2.5rem)' }}>{team2Score}</div>
+                <div className="text-yellow-300 font-bold mb-1 sm:mb-2 drop-shadow-lg" style={{ fontSize: 'clamp(0.8rem, 2vw, 1.5rem)' }}>TEAM 2</div>
+                <div className="text-white font-black drop-shadow-2xl" style={{ fontSize: 'clamp(1.2rem, 3vw, 3rem)' }}>{team2Score}</div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Question Display - Positioned Above Content */}
-        <div className="absolute top-2 sm:top-3 md:top-4 lg:top-6 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-black/85 via-black/75 to-black/85 backdrop-blur-md rounded-md sm:rounded-lg md:rounded-xl px-2 sm:px-3 md:px-4 lg:px-6 py-1.5 sm:py-2 md:py-3 lg:py-4 w-[92vw] sm:w-[85vw] md:w-[80vw] lg:w-[75vw] max-w-4xl shadow-2xl border border-yellow-400/40 z-30">
-          <div className="text-white text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl font-semibold text-center drop-shadow-lg leading-tight break-words">
+        {/* Question Display - Positioned Higher to Avoid Score Collision */}
+        <div className="absolute top-2 sm:top-3 md:top-4 lg:top-5 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-black/85 via-black/75 to-black/85 backdrop-blur-md rounded-lg sm:rounded-xl px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 w-[90vw] sm:w-[80vw] md:w-[70vw] max-w-4xl shadow-2xl border border-yellow-400/40 z-30">
+          <div className="text-white text-sm sm:text-base md:text-lg lg:text-xl font-semibold text-center drop-shadow-lg leading-tight break-words">
             {currentQuestion}
           </div>
         </div>
 
-        {/* Control Buttons - Fixed Position */}
+        {/* Control Buttons - Match Welcome Screen Style */}
         <button
           onClick={onBackToWelcome}
-          className="absolute top-0.5 sm:top-1 md:top-1.5 lg:top-2 right-1 sm:right-2 md:right-3 lg:right-4 bg-gradient-to-r from-black/70 to-black/85 hover:from-black/85 hover:to-black/95 backdrop-blur-md text-white/85 hover:text-white font-medium py-0.5 sm:py-1 md:py-1.5 px-1.5 sm:px-2 md:px-2.5 lg:px-3 rounded-sm sm:rounded-md transition-all duration-300 text-xs sm:text-sm shadow-xl border border-white/25 hover:border-white/50 z-40"
+          className="absolute top-4 right-4 sm:top-6 sm:right-6 bg-gradient-to-r from-black/70 to-black/85 hover:from-black/85 hover:to-black/95 backdrop-blur-md text-white/85 hover:text-white font-medium py-2 sm:py-3 px-4 sm:px-6 rounded-lg transition-all duration-300 text-sm sm:text-base shadow-xl border border-white/25 hover:border-white/50 z-40"
         >
           ← Menu
         </button>
-
-        <div className="absolute top-0.5 sm:top-1 md:top-1.5 lg:top-2 left-1 sm:left-2 md:left-3 lg:left-4 bg-gradient-to-r from-black/70 to-black/85 backdrop-blur-md text-white/85 font-medium py-0.5 sm:py-1 md:py-1.5 px-1.5 sm:px-2 md:px-2.5 lg:px-3 rounded-sm sm:rounded-md text-xs sm:text-sm shadow-xl border border-white/25 z-40">
-          Question {currentQuestionIndex} of {totalQuestions}
-        </div>
       </div>
     </div>
   );
