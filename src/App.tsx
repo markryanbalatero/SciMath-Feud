@@ -1,12 +1,27 @@
 import { useState } from 'react';
 import WelcomeScreen from './components/WelcomeScreen';
 import GameScreen from './components/GameScreen';
+import AdminPanel from './components/AdminPanel';
 import './App.css';
 
-type Screen = 'welcome' | 'game' | 'settings';
+interface Answer {
+  text: string;
+  points: number;
+  revealed: boolean;
+}
+
+interface GameData {
+  team1Name: string;
+  team2Name: string;
+  question: string;
+  answers: Answer[];
+}
+
+type Screen = 'welcome' | 'game' | 'settings' | 'admin';
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('welcome');
+  const [gameData, setGameData] = useState<GameData | null>(null);
 
   const startGame = () => {
     setCurrentScreen('game');
@@ -14,10 +29,15 @@ function App() {
 
   const backToWelcome = () => {
     setCurrentScreen('welcome');
+    setGameData(null); // Clear game data when returning to welcome
   };
 
   const openSettings = () => {
     setCurrentScreen('settings');
+  };
+
+  const openAdmin = () => {
+    setCurrentScreen('admin');
   };
 
   return (
@@ -26,12 +46,20 @@ function App() {
         <WelcomeScreen
           onStartGame={startGame}
           onSettings={openSettings}
+          onAdmin={openAdmin}
+        />
+      )}
+
+      {currentScreen === 'admin' && (
+        <AdminPanel
+          onBackToWelcome={backToWelcome}
         />
       )}
 
       {currentScreen === 'game' && (
         <GameScreen
           onBackToWelcome={backToWelcome}
+          gameData={gameData}
         />
       )}
 

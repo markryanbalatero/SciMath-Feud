@@ -35,6 +35,29 @@ export interface GameState {
   gameStarted: boolean;
 }
 
+export interface GameSet {
+  id?: number;
+  code: string;
+  title: string;
+  description?: string;
+  questions: GameSetQuestion[];
+  created_at?: string;
+  created_by?: string;
+}
+
+export interface GameSetQuestion {
+  id?: number;
+  question: string;
+  answers: GameSetAnswer[];
+  order_index: number;
+}
+
+export interface GameSetAnswer {
+  text: string;
+  points: number;
+  revealed?: boolean;
+}
+
 // Sample data for testing (replace with Supabase queries later)
 export const sampleQuestions: Question[] = [
   {
@@ -106,4 +129,94 @@ export const getHighScores = async () => {
   //   .limit(10);
   
   return [];
+};
+
+// Game Set Management Functions
+export const generateGameCode = (): string => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed similar looking chars
+  let result = '';
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
+export const saveGameSet = async (gameSet: Omit<GameSet, 'id' | 'created_at'>): Promise<{ code: string; success: boolean; error?: string }> => {
+  try {
+    // TODO: Implement actual Supabase save when database is ready
+    // const { data, error } = await supabase
+    //   .from('game_sets')
+    //   .insert({
+    //     code: gameSet.code,
+    //     title: gameSet.title,
+    //     description: gameSet.description,
+    //     questions: gameSet.questions
+    //   })
+    //   .select()
+    //   .single();
+    
+    // if (error) throw error;
+    
+    // For now, simulate success and store in localStorage for testing
+    const existingGameSets = JSON.parse(localStorage.getItem('familyFeudGameSets') || '[]');
+    const newGameSet = {
+      ...gameSet,
+      id: Date.now(),
+      created_at: new Date().toISOString()
+    };
+    existingGameSets.push(newGameSet);
+    localStorage.setItem('familyFeudGameSets', JSON.stringify(existingGameSets));
+    
+    console.log('Game set saved successfully:', newGameSet);
+    return { code: gameSet.code, success: true };
+  } catch (error) {
+    console.error('Error saving game set:', error);
+    return { code: gameSet.code, success: false, error: 'Failed to save game set' };
+  }
+};
+
+export const getGameSetByCode = async (code: string): Promise<{ gameSet: GameSet | null; success: boolean; error?: string }> => {
+  try {
+    // TODO: Implement actual Supabase query when database is ready
+    // const { data, error } = await supabase
+    //   .from('game_sets')
+    //   .select('*')
+    //   .eq('code', code.toUpperCase())
+    //   .single();
+    
+    // if (error) throw error;
+    
+    // For now, get from localStorage for testing
+    const existingGameSets = JSON.parse(localStorage.getItem('familyFeudGameSets') || '[]');
+    const gameSet = existingGameSets.find((set: GameSet) => set.code === code.toUpperCase());
+    
+    if (!gameSet) {
+      return { gameSet: null, success: false, error: 'Game set not found' };
+    }
+    
+    return { gameSet, success: true };
+  } catch (error) {
+    console.error('Error fetching game set:', error);
+    return { gameSet: null, success: false, error: 'Failed to fetch game set' };
+  }
+};
+
+export const getAllGameSets = async (): Promise<{ gameSets: GameSet[]; success: boolean; error?: string }> => {
+  try {
+    // TODO: Implement actual Supabase query when database is ready
+    // const { data, error } = await supabase
+    //   .from('game_sets')
+    //   .select('*')
+    //   .order('created_at', { ascending: false });
+    
+    // if (error) throw error;
+    
+    // For now, get from localStorage for testing
+    const existingGameSets = JSON.parse(localStorage.getItem('familyFeudGameSets') || '[]');
+    
+    return { gameSets: existingGameSets, success: true };
+  } catch (error) {
+    console.error('Error fetching game sets:', error);
+    return { gameSets: [], success: false, error: 'Failed to fetch game sets' };
+  }
 };

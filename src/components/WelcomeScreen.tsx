@@ -3,9 +3,10 @@ import React from 'react';
 interface WelcomeScreenProps {
   onStartGame: () => void;
   onSettings: () => void;
+  onAdmin: () => void;
 }
 
-const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStartGame, onSettings }) => {
+const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStartGame, onSettings, onAdmin }) => {
   return (
     <div className="w-screen h-screen fixed inset-0 overflow-hidden bg-gradient-to-b from-blue-800 via-blue-900 to-blue-950 flex items-center justify-center">
       {/* Background Pattern */}
@@ -272,6 +273,23 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStartGame, onSettings }
               {/* Active state overlay */}
               <div className="absolute inset-0 rounded-full bg-gradient-to-b from-blue-600 to-blue-800 opacity-0 group-active:opacity-30 transition-opacity duration-75"></div>
             </div>
+          </button>
+        </div>
+
+        {/* Action Buttons - Settings and Admin */}
+        <div className="flex gap-4 mt-8">
+          <button
+            onClick={onSettings}
+            className="bg-gradient-to-b from-gray-700 to-gray-900 border-3 border-blue-400 text-blue-300 font-bold text-lg px-6 py-3 rounded-full shadow-xl hover:scale-105 transition-transform duration-200 hover:border-blue-300"
+          >
+            ⚙️ Settings
+          </button>
+          
+          <button
+            onClick={onAdmin}
+            className="bg-gradient-to-b from-orange-600 to-orange-800 border-3 border-yellow-400 text-yellow-200 font-bold text-lg px-6 py-3 rounded-full shadow-xl hover:scale-105 transition-transform duration-200 hover:border-yellow-300"
+          >
+            🎛️ Host Control
           </button>
         </div>
 

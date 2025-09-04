@@ -3,11 +3,25 @@ import GameBoard from './GameBoard';
 import { getQuestions } from '../lib/supabase';
 import type { Question, GameState } from '../lib/supabase';
 
-interface GameScreenProps {
-  onBackToWelcome: () => void;
+interface Answer {
+  text: string;
+  points: number;
+  revealed: boolean;
 }
 
-const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome }) => {
+interface GameData {
+  team1Name: string;
+  team2Name: string;
+  question: string;
+  answers: Answer[];
+}
+
+interface GameScreenProps {
+  onBackToWelcome: () => void;
+  gameData?: GameData | null;
+}
+
+const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [gameState, setGameState] = useState<GameState>({
     currentQuestionIndex: 0,
@@ -18,10 +32,18 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome }) => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [customGame, setCustomGame] = useState<GameData | null>(gameData || null);
 
   useEffect(() => {
-    initializeGame();
-  }, []);
+    if (gameData) {
+      // Using custom game data from admin panel
+      setCustomGame(gameData);
+      setLoading(false);
+    } else {
+      // Using default questions from Supabase
+      initializeGame();
+    }
+  }, [gameData]);
 
   const initializeGame = async () => {
     try {
@@ -157,9 +179,28 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome }) => {
     );
   }
 
-  const currentQuestion = questions[gameState.currentQuestionIndex];
+  // Determine current question and answers based on data source
+  const getCurrentQuestionData = () => {
+    if (customGame) {
+      // Using custom game data from admin panel
+      return {
+        question: customGame.question,
+        answers: customGame.answers
+      };
+    } else {
+      // Using database questions
+      const currentQuestion = questions[gameState.currentQuestionIndex];
+      if (!currentQuestion) return null;
+      return {
+        question: currentQuestion.question,
+        answers: currentQuestion.answers
+      };
+    }
+  };
 
-  if (!currentQuestion) {
+  const questionData = getCurrentQuestionData();
+
+  if (!questionData) {
     return (
       <div className="w-screen h-screen fixed inset-0 bg-gradient-to-b from-blue-800 via-blue-900 to-blue-950 flex items-center justify-center">
         <div className="text-center">
@@ -179,13 +220,13 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome }) => {
   return (
     <div className="game-screen">
       <GameBoard
-        currentQuestion={currentQuestion.question}
-        answers={currentQuestion.answers}
+        currentQuestion={questionData.question}
+        answers={questionData.answers}
         team1Score={gameState.team1Score}
         team2Score={gameState.team2Score}
         strikes={gameState.strikes}
         currentQuestionIndex={gameState.currentQuestionIndex + 1}
-        totalQuestions={questions.length}
+        totalQuestions={customGame ? 1 : questions.length}
         onRevealAnswer={revealAnswer}
         onBackToWelcome={onBackToWelcome}
       />
