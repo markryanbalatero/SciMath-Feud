@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Family Feud Game Styles */
+@layer components {
+  .game-board {
+    @apply bg-gradient-to-b from-blue-900 via-blue-800 to-blue-900;
+  }
+  
+  .answer-board {
+    @apply bg-blue-800 border-4 border-yellow-400 rounded-lg shadow-2xl;
+  }
+  
+  .strike {
+    @apply text-red-500 text-8xl font-bold animate-pulse;
+  }
+  
+  .game-button {
+    @apply bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-all duration-200;
+  }
+  
+  .team-score {
+    @apply bg-white text-black text-6xl font-bold p-6 rounded-lg shadow-xl border-4 border-yellow-400;
+  }
+}
+
+/* Enhanced gradient utilities for borders and backgrounds */
+@layer utilities {
+  .border-gradient-to-r {
+    border-image: linear-gradient(to right, var(--tw-gradient-stops)) 1;
+  }
+  
+  .border-gradient-to-br {
+    border-image: linear-gradient(to bottom right, var(--tw-gradient-stops)) 1;
+  }
+  
+  .bg-gradient-radial {
+    background: radial-gradient(circle, var(--tw-gradient-stops));
+  }
+  
+  .border-6 {
+    border-width: 6px;
+  }
+  
+  .border-8 {
+    border-width: 8px;
+  }
+  
+  .border-10 {
+    border-width: 10px;
+  }
+  
+  .rounded-4xl {
+    border-radius: 2rem;
+  }
+  
+  .border-l-3 {
+    border-left-width: 3px;
+  }
+  
+  .border-3 {
+    border-width: 3px;
+  }
+  
+  .border-5 {
+    border-width: 5px;
+  }
+  
+  .border-7 {
+    border-width: 7px;
+  }
+  
+  .border-l-1 {
+    border-left-width: 1px;
+  }
+  
+  .border-1 {
+    border-width: 1px;
+  }
+  
+  /* Animation for floating elements */
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+  }
+  
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  .animate-float-delayed {
+    animation: float 3s ease-in-out infinite;
+    animation-delay: 1.5s;
+  }
+}
