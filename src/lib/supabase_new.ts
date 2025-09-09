@@ -57,19 +57,8 @@ export interface Game {
   game_set_id: string;
   team1_id?: string;
   team2_id?: string;
-  team3_id?: string;
-  team4_id?: string;
-  team5_id?: string;
-  team1_custom_name?: string;
-  team2_custom_name?: string;
-  team3_custom_name?: string;
-  team4_custom_name?: string;
-  team5_custom_name?: string;
   team1_score: number;
   team2_score: number;
-  team3_score: number;
-  team4_score: number;
-  team5_score: number;
   current_question_index: number;
   strikes: number;
   game_status: 'waiting' | 'playing' | 'paused' | 'finished';
@@ -78,9 +67,6 @@ export interface Game {
   created_at?: string;
   team1?: Team;
   team2?: Team;
-  team3?: Team;
-  team4?: Team;
-  team5?: Team;
   game_set?: GameSet;
 }
 
@@ -88,9 +74,6 @@ export interface GameState {
   currentQuestionIndex: number;
   team1Score: number;
   team2Score: number;
-  team3Score: number;
-  team4Score: number;
-  team5Score: number;
   strikes: number;
   gameStarted: boolean;
 }
@@ -163,14 +146,7 @@ export const getGameSetByCode = async (code: string): Promise<{ gameSet: GameSet
   }
 };
 
-export const createGame = async (
-  gameSetId: string, 
-  team1Id?: string, 
-  team2Id?: string, 
-  team3Id?: string, 
-  team4Id?: string, 
-  team5Id?: string
-): Promise<{ game: Game | null; success: boolean; error?: string }> => {
+export const createGame = async (gameSetId: string, team1Id?: string, team2Id?: string): Promise<{ game: Game | null; success: boolean; error?: string }> => {
   try {
     const { data, error } = await supabase
       .from('games')
@@ -178,18 +154,12 @@ export const createGame = async (
         game_set_id: gameSetId,
         team1_id: team1Id,
         team2_id: team2Id,
-        team3_id: team3Id,
-        team4_id: team4Id,
-        team5_id: team5Id,
         game_status: 'waiting'
       })
       .select(`
         *,
         team1:team1_id(*),
         team2:team2_id(*),
-        team3:team3_id(*),
-        team4:team4_id(*),
-        team5:team5_id(*),
         game_set:game_set_id(*)
       `)
       .single();
@@ -202,59 +172,13 @@ export const createGame = async (
   }
 };
 
-export const createGameWithCustomNames = async (
-  gameSetId: string, 
-  customTeam1Name?: string, 
-  customTeam2Name?: string, 
-  customTeam3Name?: string, 
-  customTeam4Name?: string, 
-  customTeam5Name?: string
-): Promise<{ game: Game | null; success: boolean; error?: string }> => {
-  try {
-    const { data, error } = await supabase
-      .from('games')
-      .insert({
-        game_set_id: gameSetId,
-        team1_custom_name: customTeam1Name,
-        team2_custom_name: customTeam2Name,
-        team3_custom_name: customTeam3Name,
-        team4_custom_name: customTeam4Name,
-        team5_custom_name: customTeam5Name,
-        game_status: 'waiting'
-      })
-      .select(`
-        *,
-        game_set:game_set_id(*)
-      `)
-      .single();
-    
-    if (error) throw error;
-    return { game: data, success: true };
-  } catch (error) {
-    console.error('Error creating game with custom names:', error);
-    return { game: null, success: false, error: 'Failed to create game' };
-  }
-};
-
-export const updateGameScore = async (
-  gameId: string, 
-  team1Score: number, 
-  team2Score: number, 
-  team3Score: number, 
-  team4Score: number, 
-  team5Score: number, 
-  strikes: number, 
-  currentQuestionIndex: number
-): Promise<boolean> => {
+export const updateGameScore = async (gameId: string, team1Score: number, team2Score: number, strikes: number, currentQuestionIndex: number): Promise<boolean> => {
   try {
     const { error } = await supabase
       .from('games')
       .update({
         team1_score: team1Score,
         team2_score: team2Score,
-        team3_score: team3Score,
-        team4_score: team4Score,
-        team5_score: team5Score,
         strikes: strikes,
         current_question_index: currentQuestionIndex
       })

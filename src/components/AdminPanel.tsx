@@ -1,14 +1,21 @@
 import React, { useState } from 'react';
-import { saveGameSet, generateGameCode, type GameSet, type GameSetQuestion } from '../lib/supabase';
+import { saveGameSet, generateGameCode, type GameSetQuestion, type GameSetAnswer } from '../lib/supabase';
 
 interface AdminPanelProps {
   onBackToWelcome: () => void;
 }
 
+// Local interface for admin panel state (before saving to database)
+interface AdminQuestion {
+  question: string;
+  answers: GameSetAnswer[];
+  order_index: number;
+}
+
 const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToWelcome }) => {
   const [gameTitle, setGameTitle] = useState('');
   const [gameDescription, setGameDescription] = useState('');
-  const [questions, setQuestions] = useState<Omit<GameSetQuestion, 'id'>[]>([
+  const [questions, setQuestions] = useState<AdminQuestion[]>([
     {
       question: '',
       answers: [
@@ -40,7 +47,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToWelcome }) => {
         { text: '', points: 0 },
         { text: '', points: 0 }
       ],
-      order_index: questions.length
+      order_index: questions.length + 1
     }]);
   };
 
@@ -94,20 +101,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToWelcome }) => {
       const gameCode = generateGameCode();
       
       // Clean up questions - only include questions with valid answers
-      const cleanedQuestions = validQuestions.map((q, index) => ({
-        ...q,
-        order_index: index,
+      const cleanedQuestions: GameSetQuestion[] = validQuestions.map((q, index) => ({
+        question: q.question,
+        order_index: index + 1,
         answers: q.answers.filter(answer => answer.text.trim() !== '')
       }));
 
-      const gameSet: Omit<GameSet, 'id' | 'created_at'> = {
+      const gameSetData = {
         code: gameCode,
         title: gameTitle,
         description: gameDescription || undefined,
         questions: cleanedQuestions
       };
 
-      const result = await saveGameSet(gameSet);
+      const result = await saveGameSet(gameSetData);
       
       if (result.success) {
         setSavedGameCode(gameCode);

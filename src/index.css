@@ -2,6 +2,145 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Enhanced Family Feud Game Animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  25% { transform: translateY(-10px) rotate(1deg); }
+  50% { transform: translateY(-20px) rotate(0deg); }
+  75% { transform: translateY(-10px) rotate(-1deg); }
+}
+
+@keyframes sparkle {
+  0%, 100% { transform: scale(0) rotate(0deg); opacity: 0; }
+  50% { transform: scale(1) rotate(180deg); opacity: 1; }
+}
+
+@keyframes neon-glow {
+  0%, 100% { 
+    box-shadow: 0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor;
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes pulse-border {
+  0%, 100% { border-color: rgba(251, 191, 36, 0.5); }
+  50% { border-color: rgba(251, 191, 36, 1); }
+}
+
+@keyframes tv-scan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+/* TV Show Stage Lighting Effect */
+.animate-float { animation: float 8s ease-in-out infinite; }
+.animate-sparkle { animation: sparkle 2s ease-in-out infinite; }
+.animate-neon-glow { animation: neon-glow 3s ease-in-out infinite; }
+.animate-pulse-border { animation: pulse-border 2s ease-in-out infinite; }
+
+/* Enhanced gradient definitions */
+.bg-gradient-radial {
+  background: radial-gradient(ellipse at center, var(--tw-gradient-stops));
+}
+
+.silver-100 {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%);
+}
+
+.silver-200 {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 50%, #94a3b8 100%);
+}
+
+/* TV Scanline Effect */
+@keyframes tv-scanline {
+  0% { transform: translateY(-100%); opacity: 1; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+.tv-scanline {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(to right, transparent, rgba(255,255,255,0.8), transparent);
+  animation: tv-scanline 3s linear infinite;
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* Enhanced button hover effects */
+.game-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.game-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s;
+}
+
+.game-button:hover::before {
+  left: 100%;
+}
+
+/* Glowing text effect */
+.glow-text {
+  text-shadow: 
+    0 0 5px currentColor,
+    0 0 10px currentColor,
+    0 0 15px currentColor,
+    0 0 20px currentColor;
+}
+
+/* Enhanced shadow effects */
+.shadow-neon {
+  box-shadow: 
+    0 0 5px currentColor,
+    0 0 10px currentColor,
+    0 0 15px currentColor,
+    0 0 20px currentColor,
+    inset 0 0 5px rgba(255,255,255,0.1);
+}
+
+/* Responsive font sizing improvements */
+@media (max-width: 640px) {
+  .responsive-text-sm { font-size: clamp(0.8rem, 2.5vw, 1rem); }
+  .responsive-text-base { font-size: clamp(1rem, 3vw, 1.25rem); }
+  .responsive-text-lg { font-size: clamp(1.25rem, 4vw, 1.75rem); }
+  .responsive-text-xl { font-size: clamp(1.5rem, 5vw, 2.25rem); }
+  .responsive-text-2xl { font-size: clamp(2rem, 6vw, 3rem); }
+}
+
+/* Custom scrollbar for better aesthetics */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(17, 24, 39, 0.8);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #f59e0b, #d97706);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #d97706, #b45309);
+}
+
 /* Family Feud Game Styles */
 @layer components {
   .game-board {
@@ -92,5 +231,57 @@
   .animate-float-delayed {
     animation: float 3s ease-in-out infinite;
     animation-delay: 1.5s;
+  }
+}
+
+/* Enhanced border utilities for larger elements */
+.border-10 { border-width: 10px; }
+.border-12 { border-width: 12px; }
+
+/* Enhanced rounded corners */
+.rounded-4xl { border-radius: 2rem; }
+
+/* Enhanced height utilities */
+.h-18 { height: 4.5rem; }
+
+/* Custom responsive text sizing for better readability */
+@media (min-width: 640px) {
+  .text-responsive-lg { font-size: clamp(1.125rem, 2.5vw, 1.5rem); }
+}
+
+@media (min-width: 768px) {
+  .text-responsive-xl { font-size: clamp(1.25rem, 3vw, 2rem); }
+}
+
+@media (min-width: 1024px) {
+  .text-responsive-2xl { font-size: clamp(1.5rem, 4vw, 3rem); }
+}
+
+/* Enhanced game board centering utilities */
+.game-board-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+/* Responsive aspect ratio utilities for game board */
+.aspect-game-board {
+  aspect-ratio: 3 / 2;
+  min-height: 300px;
+  max-height: 500px;
+}
+
+@media (max-width: 640px) {
+  .aspect-game-board {
+    min-height: 250px;
+    max-height: 350px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .aspect-game-board {
+    min-height: 350px;
+    max-height: 600px;
   }
 }

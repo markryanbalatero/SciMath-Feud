@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import WelcomeScreen from './components/WelcomeScreen';
 import GameScreen from './components/GameScreen';
+import GameSetup from './components/GameSetup';
 import AdminPanel from './components/AdminPanel';
 import './App.css';
 
@@ -17,14 +18,14 @@ interface GameData {
   answers: Answer[];
 }
 
-type Screen = 'welcome' | 'game' | 'settings' | 'admin';
+type Screen = 'welcome' | 'game' | 'gameSetup' | 'settings' | 'admin';
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('welcome');
   const [gameData, setGameData] = useState<GameData | null>(null);
 
   const startGame = () => {
-    setCurrentScreen('game');
+    setCurrentScreen('gameSetup');
   };
 
   const backToWelcome = () => {
@@ -47,6 +48,12 @@ function App() {
           onStartGame={startGame}
           onSettings={openSettings}
           onAdmin={openAdmin}
+        />
+      )}
+
+      {currentScreen === 'gameSetup' && (
+        <GameSetup
+          onBackToWelcome={backToWelcome}
         />
       )}
 
