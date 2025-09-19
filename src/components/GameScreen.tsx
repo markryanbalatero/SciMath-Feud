@@ -216,11 +216,6 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
     );
   }
 
-  // Ensure answers always have revealed: boolean
-  const safeAnswers = questionData.answers.map(a => ({
-    ...a,
-    revealed: a.revealed === true ? true : false
-  }));
 
   return (
     <div className="game-screen">
