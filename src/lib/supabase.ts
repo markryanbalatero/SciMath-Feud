@@ -301,6 +301,54 @@ export const getRevealedAnswers = async (gameId: string): Promise<string[]> => {
   }
 };
 
+export const updateGameStatus = async (
+  gameId: string, 
+  status: 'waiting' | 'playing' | 'paused' | 'finished'
+): Promise<boolean> => {
+  try {
+    const updateData: any = {
+      game_status: status
+    };
+
+    // Add started_at timestamp when game starts
+    if (status === 'playing') {
+      updateData.started_at = new Date().toISOString();
+    }
+
+    // Add finished_at timestamp when game ends
+    if (status === 'finished') {
+      updateData.finished_at = new Date().toISOString();
+    }
+
+    const { error } = await supabase
+      .from('games')
+      .update(updateData)
+      .eq('id', gameId);
+    
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error updating game status:', error);
+    return false;
+  }
+};
+
+export const getGameStatus = async (gameId: string): Promise<{ status: string | null; success: boolean; error?: string }> => {
+  try {
+    const { data, error } = await supabase
+      .from('games')
+      .select('game_status, started_at, finished_at')
+      .eq('id', gameId)
+      .single();
+    
+    if (error) throw error;
+    return { status: data?.game_status || null, success: true };
+  } catch (error) {
+    console.error('Error fetching game status:', error);
+    return { status: null, success: false, error: 'Failed to fetch game status' };
+  }
+};
+
 // Legacy function for backward compatibility
 export const getQuestions = async (): Promise<Question[]> => {
   try {

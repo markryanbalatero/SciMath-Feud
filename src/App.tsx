@@ -3,6 +3,7 @@ import WelcomeScreen from './components/WelcomeScreen';
 import GameScreen from './components/GameScreen';
 import GameSetup from './components/GameSetup';
 import AdminPanel from './components/AdminPanel';
+import HostControlScreen from './components/HostControlScreen';
 import './App.css';
 
 interface Answer {
@@ -18,7 +19,7 @@ interface GameData {
   answers: Answer[];
 }
 
-type Screen = 'welcome' | 'game' | 'gameSetup' | 'settings' | 'admin';
+type Screen = 'welcome' | 'game' | 'gameSetup' | 'settings' | 'admin' | 'hostControl';
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('welcome');
@@ -41,6 +42,10 @@ function App() {
     setCurrentScreen('admin');
   };
 
+  const openHostControl = () => {
+    setCurrentScreen('hostControl');
+  };
+
   return (
     <div className="App">
       {currentScreen === 'welcome' && (
@@ -48,6 +53,7 @@ function App() {
           onStartGame={startGame}
           onSettings={openSettings}
           onAdmin={openAdmin}
+          onHostControl={openHostControl}
         />
       )}
 
@@ -59,6 +65,12 @@ function App() {
 
       {currentScreen === 'admin' && (
         <AdminPanel
+          onBackToWelcome={backToWelcome}
+        />
+      )}
+
+      {currentScreen === 'hostControl' && (
+        <HostControlScreen
           onBackToWelcome={backToWelcome}
         />
       )}

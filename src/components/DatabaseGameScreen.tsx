@@ -1,14 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import GameBoard from './GameBoard';
-import { getGameSetByCode, createGameWithCustomNames, updateGameScore, revealAnswerInGame } from '../lib/supabase';
+import { getGameSetByCode, createGameWithCustomNames, updateGameScore, revealAnswerInGame, getGameStatus } from '../lib/supabase';
 import type { GameState, Game, GameSet } from '../lib/supabase';
-
-interface Answer {
-  id: string;
-  text: string;
-  points: number;
-  revealed: boolean;
-}
 
 interface DatabaseGameScreenProps {
   onBackToWelcome: () => void;
@@ -44,9 +37,34 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
   const [revealedAnswerIds, setRevealedAnswerIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hostGameStatus, setHostGameStatus] = useState<'waiting' | 'playing' | 'paused' | 'finished'>('waiting');
 
   useEffect(() => {
     initializeGame();
+  }, [gameCode]);
+
+  // Poll game status every 3 seconds
+  useEffect(() => {
+    const pollGameStatus = async () => {
+      if (!gameCode) return;
+      
+      try {
+        const { status, success } = await getGameStatus(gameCode);
+        if (success && status) {
+          setHostGameStatus(status as 'waiting' | 'playing' | 'paused' | 'finished');
+        }
+      } catch (error) {
+        console.error('Error polling game status:', error);
+      }
+    };
+
+    // Initial status check
+    pollGameStatus();
+
+    // Set up polling interval
+    const interval = setInterval(pollGameStatus, 3000);
+
+    return () => clearInterval(interval);
   }, [gameCode]);
 
   const initializeGame = async () => {
@@ -148,6 +166,54 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
           <button
             onClick={onBackToWelcome}
             className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Back to Welcome
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show waiting screen if host hasn't started the game yet
+  if (hostGameStatus === 'waiting') {
+    return (
+      <div className="w-screen h-screen fixed inset-0 bg-gradient-to-b from-blue-800 via-blue-900 to-blue-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-white text-3xl font-bold mb-6">🎮 Family Feud</div>
+          <div className="text-yellow-400 text-2xl font-bold mb-4">Waiting for Host to Start Game...</div>
+          <div className="text-gray-300 text-lg mb-8">Game Code: {gameCode}</div>
+          <div className="animate-pulse">
+            <div className="flex justify-center space-x-2">
+              <div className="w-3 h-3 bg-blue-400 rounded-full animate-bounce"></div>
+              <div className="w-3 h-3 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+              <div className="w-3 h-3 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+            </div>
+          </div>
+          <button
+            onClick={onBackToWelcome}
+            className="mt-8 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Back to Welcome
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show paused screen if host has paused the game
+  if (hostGameStatus === 'paused') {
+    return (
+      <div className="w-screen h-screen fixed inset-0 bg-gradient-to-b from-blue-800 via-blue-900 to-blue-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-white text-3xl font-bold mb-6">🎮 Family Feud</div>
+          <div className="text-orange-400 text-2xl font-bold mb-4">Game Paused</div>
+          <div className="text-gray-300 text-lg mb-8">Waiting for host to resume...</div>
+          <div className="animate-pulse">
+            <div className="w-16 h-16 bg-orange-400 rounded-full mx-auto"></div>
+          </div>
+          <button
+            onClick={onBackToWelcome}
+            className="mt-8 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
           >
             Back to Welcome
           </button>
