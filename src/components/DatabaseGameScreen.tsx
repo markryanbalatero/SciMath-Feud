@@ -45,11 +45,10 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
 
   // Poll game status every 3 seconds
   useEffect(() => {
+    if (!game) return;
     const pollGameStatus = async () => {
-      if (!gameCode) return;
-      
       try {
-        const { status, success } = await getGameStatus(gameCode);
+        const { status, success } = await getGameStatus(game.id);
         if (success && status) {
           setHostGameStatus(status as 'waiting' | 'playing' | 'paused' | 'finished');
         }
@@ -58,14 +57,10 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
       }
     };
 
-    // Initial status check
     pollGameStatus();
-
-    // Set up polling interval
     const interval = setInterval(pollGameStatus, 3000);
-
     return () => clearInterval(interval);
-  }, [gameCode]);
+  }, [game]);
 
   const initializeGame = async () => {
     try {
