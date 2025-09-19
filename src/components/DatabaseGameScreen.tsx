@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import GameBoard from './GameBoard';
 import { getGameSetByCode, createGameWithCustomNames, updateGameScore, revealAnswerInGame, getGameStatus } from '../lib/supabase';
 import type { GameState, Game, GameSet } from '../lib/supabase';
+import { useArduino } from '../hooks/useArduino';
 
 interface DatabaseGameScreenProps {
   onBackToWelcome: () => void;
@@ -38,6 +39,32 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hostGameStatus, setHostGameStatus] = useState<'waiting' | 'playing' | 'paused' | 'finished'>('waiting');
+  const { connected, connecting, error: arduinoError, buttonStates, lastPressedIndex, connect, disconnect, serialLog, clearLog } = useArduino({ baudRate: 9600, numButtons: 5 });
+  const [buzzWinnerIndex, setBuzzWinnerIndex] = useState<number | null>(null);
+  const lastButtonSnapshot = useRef<boolean[]>([false, false, false, false, false]);
+
+  // First-buzz lock-in detection
+  useEffect(() => {
+    if (!connected) {
+      setBuzzWinnerIndex(null);
+      lastButtonSnapshot.current = [false, false, false, false, false];
+      return;
+    }
+    if (buzzWinnerIndex !== null) {
+      lastButtonSnapshot.current = [...buttonStates];
+      return;
+    }
+    const prev = lastButtonSnapshot.current;
+    for (let i = 0; i < buttonStates.length; i++) {
+      if (!prev[i] && buttonStates[i]) {
+        setBuzzWinnerIndex(i);
+        break;
+      }
+    }
+    lastButtonSnapshot.current = [...buttonStates];
+  }, [buttonStates, connected, buzzWinnerIndex]);
+
+  const resetBuzz = useCallback(() => setBuzzWinnerIndex(null), []);
 
   useEffect(() => {
     initializeGame();
@@ -241,6 +268,39 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
 
   return (
     <div className="relative">
+      {/* Arduino Controls - top-left */}
+      <div className="fixed top-2 left-2 z-50 flex flex-col gap-2">
+        <button
+          onClick={() => connected ? disconnect() : connect()}
+          className={`px-4 py-2 rounded-md text-sm font-semibold shadow-md transition-colors ${connected ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}
+          disabled={connecting}
+        >
+          {connecting ? 'Connecting...' : connected ? 'Disconnect Buzzers' : 'Connect Buzzers'}
+        </button>
+        {connected && (
+          <div className="flex gap-2">
+            <button onClick={resetBuzz} className="px-3 py-1 rounded-md text-xs font-semibold shadow bg-yellow-600 hover:bg-yellow-700 text-white">Reset Buzz</button>
+            <button onClick={clearLog} className="px-3 py-1 rounded-md text-xs font-semibold shadow bg-gray-600 hover:bg-gray-700 text-white">Clear Log</button>
+          </div>
+        )}
+        {arduinoError && <div className="text-xs text-red-300 max-w-[200px]">{arduinoError}</div>}
+        {connected && (
+          <div className="flex items-center gap-1">
+            {buttonStates.map((b, i) => (
+              <div key={i} className={`w-4 h-4 rounded-full ${b ? 'bg-yellow-300 animate-pulse' : 'bg-gray-600'}`} title={`B${i+1}`}></div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Serial Log - bottom-left */}
+      <div className="fixed bottom-2 left-2 z-50 w-72 max-h-48 overflow-auto bg-black/60 text-green-200 text-xs p-2 rounded-md border border-white/10">
+        <div className="font-semibold text-white/80 mb-1">Serial Log</div>
+        {serialLog.length === 0 && <div className="text-white/50">(no data)</div>}
+        {serialLog.slice(-50).map((entry, idx) => (
+          <div key={idx} className="whitespace-pre">{new Date(entry.t).toLocaleTimeString()} - {entry.line}</div>
+        ))}
+      </div>
       <GameBoard
         currentQuestion={currentQuestion.question}
         answers={answersWithRevealState}
@@ -258,6 +318,10 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
         currentQuestionIndex={gameState.currentQuestionIndex}
         totalQuestions={gameSet.questions.length}
         onRevealAnswer={revealAnswer}
+        arduinoConnected={connected}
+        buttonStates={buttonStates}
+        lastPressedIndex={lastPressedIndex}
+        buzzWinnerIndex={buzzWinnerIndex}
       />
     </div>
   );
