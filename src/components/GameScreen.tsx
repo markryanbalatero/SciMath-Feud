@@ -27,6 +27,9 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
     currentQuestionIndex: 0,
     team1Score: 0,
     team2Score: 0,
+    team3Score: 0,
+    team4Score: 0,
+    team5Score: 0,
     strikes: 0,
     gameStarted: false
   });
@@ -82,64 +85,6 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
     }
   };
 
-  const addStrike = () => {
-    setGameState(prev => ({
-      ...prev,
-      strikes: prev.strikes < 3 ? prev.strikes + 1 : prev.strikes
-    }));
-  };
-
-  const resetStrikes = () => {
-    setGameState(prev => ({
-      ...prev,
-      strikes: 0
-    }));
-  };
-
-  const updateTeamScore = (team: 1 | 2, points: number) => {
-    setGameState(prev => ({
-      ...prev,
-      [team === 1 ? 'team1Score' : 'team2Score']: 
-        prev[team === 1 ? 'team1Score' : 'team2Score'] + points
-    }));
-  };
-
-  const nextQuestion = () => {
-    if (gameState.currentQuestionIndex < questions.length - 1) {
-      setGameState(prev => ({
-        ...prev,
-        currentQuestionIndex: prev.currentQuestionIndex + 1,
-        strikes: 0 // Reset strikes for new question
-      }));
-    } else {
-      // End of game
-      handleGameEnd();
-    }
-  };
-
-  const handleGameEnd = () => {
-    const winner = gameState.team1Score > gameState.team2Score ? 'Team 1' : 
-                   gameState.team2Score > gameState.team1Score ? 'Team 2' : 'Tie';
-    
-    alert(`Game Over! ${winner === 'Tie' ? 'It\'s a tie!' : `${winner} wins!`}\n\nFinal Scores:\nTeam 1: ${gameState.team1Score}\nTeam 2: ${gameState.team2Score}`);
-    onBackToWelcome();
-  };
-
-  const resetGame = () => {
-    setGameState({
-      currentQuestionIndex: 0,
-      team1Score: 0,
-      team2Score: 0,
-      strikes: 0,
-      gameStarted: true
-    });
-    // Reset all answers to hidden
-    const resetQuestions = questions.map(q => ({
-      ...q,
-      answers: q.answers.map(a => ({ ...a, revealed: false }))
-    }));
-    setQuestions(resetQuestions);
-  };
 
   if (loading) {
     return (
@@ -199,7 +144,6 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
   };
 
   const questionData = getCurrentQuestionData();
-
   if (!questionData) {
     return (
       <div className="w-screen h-screen fixed inset-0 bg-gradient-to-b from-blue-800 via-blue-900 to-blue-950 flex items-center justify-center">
@@ -217,18 +161,26 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
     );
   }
 
+  // Ensure answers always have revealed: boolean
+  const safeAnswers = questionData.answers.map(a => ({
+    ...a,
+    revealed: a.revealed === true ? true : false
+  }));
+
   return (
     <div className="game-screen">
       <GameBoard
         currentQuestion={questionData.question}
-        answers={questionData.answers}
+        answers={safeAnswers}
         team1Score={gameState.team1Score}
         team2Score={gameState.team2Score}
+        team3Score={gameState.team3Score}
+        team4Score={gameState.team4Score}
+        team5Score={gameState.team5Score}
         strikes={gameState.strikes}
         currentQuestionIndex={gameState.currentQuestionIndex + 1}
         totalQuestions={customGame ? 1 : questions.length}
         onRevealAnswer={revealAnswer}
-        onBackToWelcome={onBackToWelcome}
       />
     </div>
   );

@@ -24,7 +24,7 @@ interface HostControlProps {
   team5Score: number;
   strikes: number;
   gameStatus?: 'waiting' | 'playing' | 'paused' | 'finished';
-  onRevealAnswer: (index: number) => void;
+  onRevealAnswer: (index: number, teamId?: number) => void;
   onNextQuestion: () => void;
   onAddStrike: () => void;
   onStartGame?: () => void;
@@ -69,7 +69,7 @@ const HostControl: React.FC<HostControlProps> = ({
   ];
 
   const handleAnswerClick = (answerIndex: number) => {
-    onRevealAnswer(answerIndex);
+  onRevealAnswer(answerIndex, selectedTeam);
   };
 
   const handleBuzzer = () => {
@@ -89,7 +89,6 @@ const HostControl: React.FC<HostControlProps> = ({
 
   return (
     <div className="w-screen h-screen fixed inset-0 overflow-auto bg-[#1f225d] p-6">
-      
       {/* Header with Game Controls */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
@@ -102,7 +101,6 @@ const HostControl: React.FC<HostControlProps> = ({
           <h1 className="text-white text-2xl font-bold">
             #{currentQuestionIndex + 1} {currentQuestion}
           </h1>
-          
           {/* Game Status Indicator */}
           <div className={`px-3 py-1 rounded-full text-sm font-bold ${
             gameStatus === 'waiting' ? 'bg-yellow-600 text-yellow-100' :
@@ -113,7 +111,6 @@ const HostControl: React.FC<HostControlProps> = ({
             {gameStatus.toUpperCase()}
           </div>
         </div>
-        
         <div className="flex items-center gap-3">
           {/* Game Control Buttons */}
           {gameStatus === 'waiting' && onStartGame && (
@@ -124,7 +121,6 @@ const HostControl: React.FC<HostControlProps> = ({
               ▶️ START GAME
             </button>
           )}
-          
           {gameStatus === 'playing' && onPauseGame && (
             <button
               onClick={onPauseGame}
@@ -133,7 +129,6 @@ const HostControl: React.FC<HostControlProps> = ({
               ⏸️ PAUSE
             </button>
           )}
-          
           {gameStatus === 'paused' && onStartGame && (
             <button
               onClick={onStartGame}
@@ -142,7 +137,6 @@ const HostControl: React.FC<HostControlProps> = ({
               ▶️ RESUME
             </button>
           )}
-          
           {(gameStatus === 'playing' || gameStatus === 'paused') && (
             <button
               onClick={onNextQuestion}
@@ -151,7 +145,6 @@ const HostControl: React.FC<HostControlProps> = ({
               NEXT QUESTION
             </button>
           )}
-          
           {onEndGame && gameStatus !== 'finished' && (
             <button
               onClick={onEndGame}
@@ -161,6 +154,23 @@ const HostControl: React.FC<HostControlProps> = ({
             </button>
           )}
         </div>
+      </div>
+
+      {/* Team Selector */}
+      <div className="flex justify-center mb-6 gap-2">
+        {teams.map(team => (
+          <button
+            key={team.id}
+            onClick={() => setSelectedTeam(team.id)}
+            className={`px-4 py-2 rounded font-bold border-2 transition-colors duration-150 ${
+              selectedTeam === team.id
+                ? 'bg-yellow-400 text-blue-900 border-yellow-500'
+                : 'bg-blue-700 text-white border-blue-900 hover:bg-blue-600'
+            }`}
+          >
+            {team.name}
+          </button>
+        ))}
       </div>
 
       {/* Teams Grid */}
@@ -203,10 +213,10 @@ const HostControl: React.FC<HostControlProps> = ({
                   }`}
                 >
                   <span>
-                    {answer.revealed ? answer.text : `ANSWER ${index + 1}`}
+                    {answer.text || `ANSWER ${index + 1}`}
                   </span>
                   <span className="bg-blue-800 px-2 py-1 rounded text-xs min-w-[30px] text-center">
-                    {answer.revealed || !answer.text ? answer.points : ''}
+                    {answer.points}
                   </span>
                 </button>
               ))}

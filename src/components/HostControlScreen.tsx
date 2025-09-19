@@ -1,14 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import HostControl from './HostControl';
 import { getGameSetByCode, createGameWithCustomNames, updateGameScore, revealAnswerInGame, updateGameStatus } from '../lib/supabase';
 import type { GameState, Game, GameSet } from '../lib/supabase';
-
-interface Answer {
-  id: string;
-  text: string;
-  points: number;
-  revealed: boolean;
-}
 
 interface HostControlScreenProps {
   onBackToWelcome: () => void;
@@ -80,7 +73,9 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
     }
   };
 
-  const revealAnswer = async (answerIndex: number) => {
+  const revealAnswer = async (answerIndex: number, teamId?: number) => {
+    const teamIndex = teamId || 1; // Default to team 1 if no team specified
+    
     if (!gameSet?.questions || !game) return;
 
     const currentQuestion = gameSet.questions[gameState.currentQuestionIndex];
@@ -91,27 +86,36 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
 
     try {
       // Add to revealed answers in database
-      const success = await revealAnswerInGame(game.id, answer.id, 1);
-      
+      const success = await revealAnswerInGame(game.id, answer.id, teamIndex);
+
       if (success) {
         // Update local state
         setRevealedAnswerIds(prev => [...prev, answer.id]);
-        
-        // Add points to team 1 score (you can modify this logic)
-        const newTeam1Score = gameState.team1Score + answer.points;
-        setGameState(prev => ({
-          ...prev,
-          team1Score: newTeam1Score
-        }));
+
+        // Add points to the correct team
+        setGameState(prev => {
+          const updatedScores = [prev.team1Score, prev.team2Score, prev.team3Score, prev.team4Score, prev.team5Score];
+          if (teamIndex >= 1 && teamIndex <= 5) {
+            updatedScores[teamIndex - 1] += answer.points;
+          }
+          return {
+            ...prev,
+            team1Score: updatedScores[0],
+            team2Score: updatedScores[1],
+            team3Score: updatedScores[2],
+            team4Score: updatedScores[3],
+            team5Score: updatedScores[4]
+          };
+        });
 
         // Update game score in database
         await updateGameScore(
           game.id,
-          newTeam1Score,
-          gameState.team2Score,
-          gameState.team3Score,
-          gameState.team4Score,
-          gameState.team5Score,
+          teamIndex === 1 ? gameState.team1Score + answer.points : gameState.team1Score,
+          teamIndex === 2 ? gameState.team2Score + answer.points : gameState.team2Score,
+          teamIndex === 3 ? gameState.team3Score + answer.points : gameState.team3Score,
+          teamIndex === 4 ? gameState.team4Score + answer.points : gameState.team4Score,
+          teamIndex === 5 ? gameState.team5Score + answer.points : gameState.team5Score,
           gameState.strikes,
           gameState.currentQuestionIndex
         );
