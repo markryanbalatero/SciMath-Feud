@@ -7,11 +7,11 @@ interface GameBoardProps {
     points: number;
     revealed: boolean;
   }>;
-  team1Score: number;
-  team2Score: number;
-  team3Score: number;
-  team4Score: number;
-  team5Score: number;
+  team1Score?: number;
+  team2Score?: number;
+  team3Score?: number;
+  team4Score?: number;
+  team5Score?: number;
   team1Name?: string;
   team2Name?: string;
   team3Name?: string;
@@ -21,28 +21,58 @@ interface GameBoardProps {
   currentQuestionIndex?: number;
   totalQuestions?: number;
   onRevealAnswer: (index: number) => void;
+  // Arduino integration
+  arduinoConnected?: boolean;
+  buttonStates?: boolean[]; // index 0..4 for teams 1..5
+  lastPressedIndex?: number | null; // kept for compatibility
+  buzzWinnerIndex?: number | null; // first team to buzz (lock-in)
 }
 
 const GameBoard: React.FC<GameBoardProps> = ({
   currentQuestion,
   answers,
-  team1Score,
-  team2Score,
-  team3Score,
-  team4Score,
-  team5Score,
+  team1Score = 0,
+  team2Score = 0,
+  team3Score = 0,
+  team4Score = 0,
+  team5Score = 0,
   team1Name,
   team2Name,
   team3Name,
   team4Name,
   team5Name,
   strikes,
-  onRevealAnswer
+  onRevealAnswer,
+  arduinoConnected = false,
+  buttonStates = [false, false, false, false, false],
+  lastPressedIndex,
+  buzzWinnerIndex
 }) => {
   const handleAnswerClick = (index: number) => {
     if (!answers[index].revealed) {
       onRevealAnswer(index);
     }
+  };
+
+  const teamHighlight = (teamIndex: number, base: string) => {
+    if (!arduinoConnected) return base;
+    // If a winner is locked, show only that team highlighted
+    if (buzzWinnerIndex !== undefined && buzzWinnerIndex !== null) {
+      if (buzzWinnerIndex === teamIndex) {
+        return base + ' ring-4 ring-white animate-pulse shadow-[0_0_18px_rgba(255,255,255,0.8)]';
+      }
+      return base + ' opacity-70';
+    }
+    // Otherwise, live-echo pressed buttons and briefly flash last press
+    const active = buttonStates[teamIndex];
+    const winnerFlash = lastPressedIndex === teamIndex;
+    if (winnerFlash) {
+      return base + ' ring-4 ring-white animate-pulse';
+    }
+    if (active) {
+      return base + ' ring-4 ring-yellow-300 shadow-[0_0_15px_rgba(255,255,0,0.7)]';
+    }
+    return base;
   };
 
   return (
@@ -89,7 +119,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
             {/* Left Side - Teams 1 & 2 */}
             <div className="flex flex-col gap-3 sm:gap-4">
               {/* Team 1 */}
-              <div className="bg-gradient-to-br from-red-700 to-red-800 border-2 sm:border-3 lg:border-4 border-yellow-400 rounded-xl lg:rounded-2xl w-20 sm:w-28 lg:w-36 xl:w-40 h-24 sm:h-32 lg:h-40 xl:h-44 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden">
+              <div className={teamHighlight(0, "bg-gradient-to-br from-red-700 to-red-800 border-2 sm:border-3 lg:border-4 border-yellow-400 rounded-xl lg:rounded-2xl w-20 sm:w-28 lg:w-36 xl:w-40 h-24 sm:h-32 lg:h-40 xl:h-44 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden transition-all duration-200")}>                
                 <div className="absolute inset-1 sm:inset-2 border-2 border-dotted border-yellow-300 rounded-lg lg:rounded-xl"></div>
                 <div className="text-white font-bold text-xs sm:text-sm lg:text-base xl:text-lg drop-shadow-lg z-10 mb-1 text-center px-1">
                   {team1Name || 'Team 1'}
@@ -98,7 +128,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
               </div>
               
               {/* Team 2 */}
-              <div className="bg-gradient-to-br from-blue-700 to-blue-800 border-2 sm:border-3 lg:border-4 border-yellow-400 rounded-xl lg:rounded-2xl w-20 sm:w-28 lg:w-36 xl:w-40 h-24 sm:h-32 lg:h-40 xl:h-44 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden">
+              <div className={teamHighlight(1, "bg-gradient-to-br from-blue-700 to-blue-800 border-2 sm:border-3 lg:border-4 border-yellow-400 rounded-xl lg:rounded-2xl w-20 sm:w-28 lg:w-36 xl:w-40 h-24 sm:h-32 lg:h-40 xl:h-44 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden transition-all duration-200")}>                
                 <div className="absolute inset-1 sm:inset-2 border-2 border-dotted border-yellow-300 rounded-lg lg:rounded-xl"></div>
                 <div className="text-white font-bold text-xs sm:text-sm lg:text-base xl:text-lg drop-shadow-lg z-10 mb-1 text-center px-1">
                   {team2Name || 'Team 2'}
@@ -153,7 +183,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
             {/* Right Side - Teams 4 & 5 */}
             <div className="flex flex-col gap-3 sm:gap-4">
               {/* Team 4 */}
-              <div className="bg-gradient-to-br from-purple-700 to-purple-800 border-2 sm:border-3 lg:border-4 border-yellow-400 rounded-xl lg:rounded-2xl w-20 sm:w-28 lg:w-36 xl:w-40 h-24 sm:h-32 lg:h-40 xl:h-44 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden">
+              <div className={teamHighlight(3, "bg-gradient-to-br from-purple-700 to-purple-800 border-2 sm:border-3 lg:border-4 border-yellow-400 rounded-xl lg:rounded-2xl w-20 sm:w-28 lg:w-36 xl:w-40 h-24 sm:h-32 lg:h-40 xl:h-44 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden transition-all duration-200")}>                
                 <div className="absolute inset-1 sm:inset-2 border-2 border-dotted border-yellow-300 rounded-lg lg:rounded-xl"></div>
                 <div className="text-white font-bold text-xs sm:text-sm lg:text-base xl:text-lg drop-shadow-lg z-10 mb-1 text-center px-1">
                   {team4Name || 'Team 4'}
@@ -162,7 +192,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
               </div>
               
               {/* Team 5 */}
-              <div className="bg-gradient-to-br from-orange-700 to-orange-800 border-2 sm:border-3 lg:border-4 border-yellow-400 rounded-xl lg:rounded-2xl w-20 sm:w-28 lg:w-36 xl:w-40 h-24 sm:h-32 lg:h-40 xl:h-44 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden">
+              <div className={teamHighlight(4, "bg-gradient-to-br from-orange-700 to-orange-800 border-2 sm:border-3 lg:border-4 border-yellow-400 rounded-xl lg:rounded-2xl w-20 sm:w-28 lg:w-36 xl:w-40 h-24 sm:h-32 lg:h-40 xl:h-44 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden transition-all duration-200")}>                
                 <div className="absolute inset-1 sm:inset-2 border-2 border-dotted border-yellow-300 rounded-lg lg:rounded-xl"></div>
                 <div className="text-white font-bold text-xs sm:text-sm lg:text-base xl:text-lg drop-shadow-lg z-10 mb-1 text-center px-1">
                   {team5Name || 'Team 5'}
@@ -174,7 +204,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
           {/* Bottom Section - Team 3 */}
           <div className="flex justify-center mt-4 sm:mt-6">
-            <div className="bg-gradient-to-br from-green-700 to-green-800 border-2 sm:border-3 lg:border-4 border-yellow-400 rounded-xl lg:rounded-2xl w-24 sm:w-32 lg:w-40 xl:w-44 h-20 sm:h-24 lg:h-28 xl:h-32 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden">
+            <div className={teamHighlight(2, "bg-gradient-to-br from-green-700 to-green-800 border-2 sm:border-3 lg:border-4 border-yellow-400 rounded-xl lg:rounded-2xl w-24 sm:w-32 lg:w-40 xl:w-44 h-20 sm:h-24 lg:h-28 xl:h-32 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden transition-all duration-200")}>              
               <div className="absolute inset-1 sm:inset-2 border-2 border-dotted border-yellow-300 rounded-lg lg:rounded-xl"></div>
               <div className="text-white font-bold text-xs sm:text-sm lg:text-base xl:text-lg drop-shadow-lg z-10 mb-1 text-center px-1">
                 {team3Name || 'Team 3'}
@@ -201,6 +231,11 @@ const GameBoard: React.FC<GameBoardProps> = ({
                 <span className="font-black text-sm sm:text-lg lg:text-xl xl:text-2xl">✕</span>
               </div>
             ))}
+          </div>
+
+          {/* Arduino Status */}
+          <div className="text-xs sm:text-sm text-center text-white/70 mt-2">
+            {arduinoConnected ? 'Buzzers Connected' : 'Buzzers Disconnected'}
           </div>
         </div>
       </div>

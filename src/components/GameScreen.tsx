@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import GameBoard from './GameBoard';
 import { getQuestions } from '../lib/supabase';
 import type { Question, GameState } from '../lib/supabase';
+import { useArduino } from '../hooks/useArduino';
 
 interface Answer {
   text: string;
@@ -27,12 +28,66 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
     currentQuestionIndex: 0,
     team1Score: 0,
     team2Score: 0,
+    team3Score: 0,
+    team4Score: 0,
+    team5Score: 0,
     strikes: 0,
     gameStarted: false
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [customGame, setCustomGame] = useState<GameData | null>(gameData || null);
+  const { connected, connecting, error: arduinoError, buttonStates, lastPressedIndex, connect, disconnect } = useArduino({ baudRate: 9600, numButtons: 5 });
+  const [buzzWinnerIndex, setBuzzWinnerIndex] = useState<number | null>(null);
+  const lastButtonSnapshot = useRef<boolean[]>([false, false, false, false, false]);
+
+  // Detect first transition from not pressed -> pressed across any button
+  useEffect(() => {
+    if (!connected) {
+      setBuzzWinnerIndex(null);
+      lastButtonSnapshot.current = [false, false, false, false, false];
+      return;
+    }
+    if (buzzWinnerIndex !== null) {
+      // locked; ignore further presses until reset
+      lastButtonSnapshot.current = [...buttonStates];
+      return;
+    }
+    const prev = lastButtonSnapshot.current;
+    for (let i = 0; i < buttonStates.length; i++) {
+      if (!prev[i] && buttonStates[i]) {
+        setBuzzWinnerIndex(i);
+        break;
+      }
+    }
+    lastButtonSnapshot.current = [...buttonStates];
+  }, [buttonStates, connected, buzzWinnerIndex]);
+
+  // Simple beep on lock-in (browser tone)
+  const playBeep = useCallback(() => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.value = 1200;
+      o.connect(g);
+      g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.0001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.15);
+      o.start();
+      o.stop(ctx.currentTime + 0.16);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (buzzWinnerIndex !== null) {
+      playBeep();
+    }
+  }, [buzzWinnerIndex, playBeep]);
+
+  const resetBuzz = () => setBuzzWinnerIndex(null);
 
   useEffect(() => {
     if (gameData) {
@@ -82,64 +137,9 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
     }
   };
 
-  const addStrike = () => {
-    setGameState(prev => ({
-      ...prev,
-      strikes: prev.strikes < 3 ? prev.strikes + 1 : prev.strikes
-    }));
-  };
+  // handleGameEnd removed (unused in current simplified flow)
 
-  const resetStrikes = () => {
-    setGameState(prev => ({
-      ...prev,
-      strikes: 0
-    }));
-  };
-
-  const updateTeamScore = (team: 1 | 2, points: number) => {
-    setGameState(prev => ({
-      ...prev,
-      [team === 1 ? 'team1Score' : 'team2Score']: 
-        prev[team === 1 ? 'team1Score' : 'team2Score'] + points
-    }));
-  };
-
-  const nextQuestion = () => {
-    if (gameState.currentQuestionIndex < questions.length - 1) {
-      setGameState(prev => ({
-        ...prev,
-        currentQuestionIndex: prev.currentQuestionIndex + 1,
-        strikes: 0 // Reset strikes for new question
-      }));
-    } else {
-      // End of game
-      handleGameEnd();
-    }
-  };
-
-  const handleGameEnd = () => {
-    const winner = gameState.team1Score > gameState.team2Score ? 'Team 1' : 
-                   gameState.team2Score > gameState.team1Score ? 'Team 2' : 'Tie';
-    
-    alert(`Game Over! ${winner === 'Tie' ? 'It\'s a tie!' : `${winner} wins!`}\n\nFinal Scores:\nTeam 1: ${gameState.team1Score}\nTeam 2: ${gameState.team2Score}`);
-    onBackToWelcome();
-  };
-
-  const resetGame = () => {
-    setGameState({
-      currentQuestionIndex: 0,
-      team1Score: 0,
-      team2Score: 0,
-      strikes: 0,
-      gameStarted: true
-    });
-    // Reset all answers to hidden
-    const resetQuestions = questions.map(q => ({
-      ...q,
-      answers: q.answers.map(a => ({ ...a, revealed: false }))
-    }));
-    setQuestions(resetQuestions);
-  };
+  // (Optional) future helpers for strikes, scores, etc. removed due to unused.
 
   if (loading) {
     return (
@@ -219,16 +219,55 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
 
   return (
     <div className="game-screen">
+      {/* Overlay controls for Arduino connection */}
+      <div className="fixed top-2 left-2 z-50 flex flex-col gap-2">
+        <button
+          onClick={() => connected ? disconnect() : connect()}
+          className={`px-4 py-2 rounded-md text-sm font-semibold shadow-md transition-colors ${connected ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}
+          disabled={connecting}
+        >
+          {connecting ? 'Connecting...' : connected ? 'Disconnect Buzzers' : 'Connect Buzzers'}
+        </button>
+        {connected && (
+          <button
+            onClick={resetBuzz}
+            className="px-3 py-1 rounded-md text-xs font-semibold shadow bg-yellow-600 hover:bg-yellow-700 text-white"
+          >
+            Reset Buzz
+          </button>
+        )}
+        {arduinoError && (
+          <div className="text-xs text-red-300 max-w-[160px]">{arduinoError}</div>
+        )}
+        {connected && (
+          <div className="flex gap-1">
+            {buttonStates.map((b, i) => (
+              <div key={i} className={`w-4 h-4 rounded-full ${b ? 'bg-yellow-300 animate-pulse' : 'bg-gray-600'}`}></div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <GameBoard
         currentQuestion={questionData.question}
-        answers={questionData.answers}
+        answers={questionData.answers.map(a => ({
+          text: (a as any).text,
+            points: (a as any).points,
+            revealed: (a as any).revealed ?? false
+        }))}
         team1Score={gameState.team1Score}
         team2Score={gameState.team2Score}
+        team3Score={gameState.team3Score}
+        team4Score={gameState.team4Score}
+        team5Score={gameState.team5Score}
         strikes={gameState.strikes}
         currentQuestionIndex={gameState.currentQuestionIndex + 1}
         totalQuestions={customGame ? 1 : questions.length}
         onRevealAnswer={revealAnswer}
-        onBackToWelcome={onBackToWelcome}
+        arduinoConnected={connected}
+        buttonStates={buttonStates}
+        lastPressedIndex={lastPressedIndex}
+        buzzWinnerIndex={buzzWinnerIndex}
       />
     </div>
   );
