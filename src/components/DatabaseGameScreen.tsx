@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import GameBoard from './GameBoard';
 import { getGameSetByCode, getRevealedAnswers, supabase } from '../lib/supabase';
 import type { GameState, Game, GameSet } from '../lib/supabase';
+import correctAnswerSound from '../assets/correct_answer.mp3';
+import wrongAnswerSound from '../assets/wrong_answer.mp3';
 
 interface DatabaseGameScreenProps {
   onBackToWelcome: () => void;
@@ -48,9 +50,20 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
   const [showStrikeAnimation, setShowStrikeAnimation] = useState(false);
   const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastStrikeCountRef = useRef<number>(0);
+  const correctAudioRef = useRef<HTMLAudioElement | null>(null);
+  const wrongAudioRef = useRef<HTMLAudioElement | null>(null);
+  const prevRevealedAnswersRef = useRef<string[]>([]);
 
   useEffect(() => {
     initializeGame();
+    
+    // Initialize audio elements
+    correctAudioRef.current = new Audio(correctAnswerSound);
+    wrongAudioRef.current = new Audio(wrongAnswerSound);
+    
+    // Set volume levels
+    if (correctAudioRef.current) correctAudioRef.current.volume = 0.7;
+    if (wrongAudioRef.current) wrongAudioRef.current.volume = 0.7;
   }, [gameCode]);
 
   // Reset animation state when game changes
@@ -58,12 +71,32 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
     if (game) {
       setShowStrikeAnimation(false);
       lastStrikeCountRef.current = 0;
+      prevRevealedAnswersRef.current = [];
       if (animationTimeoutRef.current) {
         clearTimeout(animationTimeoutRef.current);
         animationTimeoutRef.current = null;
       }
     }
   }, [game?.id]);
+
+  // Sound effect functions
+  const playCorrectSound = () => {
+    if (correctAudioRef.current) {
+      correctAudioRef.current.currentTime = 0; // Reset to start
+      correctAudioRef.current.play().catch(error => {
+        console.log('Could not play correct answer sound:', error);
+      });
+    }
+  };
+
+  const playWrongSound = () => {
+    if (wrongAudioRef.current) {
+      wrongAudioRef.current.currentTime = 0; // Reset to start
+      wrongAudioRef.current.play().catch(error => {
+        console.log('Could not play wrong answer sound:', error);
+      });
+    }
+  };
 
   // Poll game status and scores every 2 seconds
   useEffect(() => {
@@ -115,6 +148,9 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
         if (totalCurrentStrikes > lastStrikeCountRef.current && !showStrikeAnimation) {
           console.log('Strike detected! Total strikes increased from', lastStrikeCountRef.current, 'to', totalCurrentStrikes);
           
+          // Play wrong answer sound
+          playWrongSound();
+          
           // Update the last strike count immediately to prevent multiple triggers
           lastStrikeCountRef.current = totalCurrentStrikes;
           
@@ -156,6 +192,19 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
         // Fetch revealed answers for current question
         if (newStatus === 'playing') {
           const revealedAnswers = await getRevealedAnswers(game.id);
+          
+          // Check if new answers were revealed
+          const previouslyRevealed = prevRevealedAnswersRef.current;
+          const newlyRevealed = revealedAnswers.filter(id => !previouslyRevealed.includes(id));
+          
+          if (newlyRevealed.length > 0) {
+            console.log('New answers revealed:', newlyRevealed);
+            // Play correct answer sound for newly revealed answers
+            playCorrectSound();
+          }
+          
+          // Update the refs and state
+          prevRevealedAnswersRef.current = revealedAnswers;
           setRevealedAnswerIds(revealedAnswers);
         }
 
