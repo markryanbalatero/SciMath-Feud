@@ -39,6 +39,7 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hostGameStatus, setHostGameStatus] = useState<'waiting' | 'playing' | 'paused' | 'finished'>('waiting');
+  // Host gating temporarily disabled
   const { connected, connecting, error: arduinoError, buttonStates, lastPressedIndex, connect, disconnect, serialLog, clearLog } = useArduino({ baudRate: 9600, numButtons: 5 });
   const [buzzWinnerIndex, setBuzzWinnerIndex] = useState<number | null>(null);
   const lastButtonSnapshot = useRef<boolean[]>([false, false, false, false, false]);
@@ -124,6 +125,7 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
     const interval = setInterval(pollGameData, 2000); // Poll every 2 seconds for real-time updates
     return () => clearInterval(interval);
   }, [game, gameState.gameStarted]);
+  // Host status polling removed (temporary bypass)
 
   const initializeGame = async () => {
     try {
@@ -154,11 +156,10 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
         
         // Check if the game is playing
         if (latestGame.game_status !== 'playing') {
-          setError('Game has not started yet. Please wait for the host to start the game.');
-          setGame(latestGame); // Set the game so polling can work
-          setHostGameStatus(latestGame.game_status);
-          return;
-        }
+           setGame(latestGame); // Set the game so polling can work
+           setHostGameStatus(latestGame.game_status);
+           return;
+         }
         
         // Game is playing, join it
         setGame(latestGame);
@@ -361,6 +362,7 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
       </div>
     );
   }
+  // Waiting/paused screens disabled (temporary bypass)
 
   if (!gameSet?.questions || gameSet.questions.length === 0) {
     return (
