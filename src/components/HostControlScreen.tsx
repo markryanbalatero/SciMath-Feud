@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import HostControl from './HostControl';
-import { getGameSetByCode, createGameWithCustomNames, updateGameScore, revealAnswerInGame, updateGameStatus } from '../lib/supabase';
+import { getGameSetByCode, createGameWithCustomNames, updateGameScore, revealAnswerInGame, updateGameStatus, addTeamStrike, supabase } from '../lib/supabase';
 import type { GameState, Game, GameSet } from '../lib/supabase';
 
 interface HostControlScreenProps {
@@ -24,7 +24,6 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
   const [revealedAnswerIds, setRevealedAnswerIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [gameStarted, setGameStarted] = useState(false);
   const [gameStatus, setGameStatus] = useState<'waiting' | 'playing' | 'paused' | 'finished'>('waiting');
   // Team name states
   const [customTeam1Name, setCustomTeam1Name] = useState('');
@@ -34,6 +33,39 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
   const [customTeam5Name, setCustomTeam5Name] = useState('');
   // Step state
   const [step, setStep] = useState<'code' | 'teams' | 'control'>('code');
+
+  // Poll game data for real-time updates
+  const pollGameData = async () => {
+    if (!game) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('games')
+        .select('*')
+        .eq('id', game.id)
+        .single();
+      
+      if (data && !error) {
+        setGame(data);
+        setGameState(prev => ({
+          ...prev,
+          team1Score: data.team1_score || 0,
+          team2Score: data.team2_score || 0,
+          team3Score: data.team3_score || 0,
+          team4Score: data.team4_score || 0,
+          team5Score: data.team5_score || 0,
+          strikes: data.strikes || 0,
+          team1Strikes: data.team1_strikes || 0,
+          team2Strikes: data.team2_strikes || 0,
+          team3Strikes: data.team3_strikes || 0,
+          team4Strikes: data.team4_strikes || 0,
+          team5Strikes: data.team5_strikes || 0
+        }));
+      }
+    } catch (error) {
+      console.error('Error polling game data:', error);
+    }
+  };
 
   // Step 1: Validate game code
   const validateGameCode = async () => {
@@ -103,7 +135,6 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
       await updateGameStatus(gameData.id, 'playing');
       setGameStatus('playing');
       setGame(gameData);
-      setGameStarted(true);
       setStep('control');
       setError(null);
     } catch (error) {
@@ -132,30 +163,37 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
         // Update local state
         setRevealedAnswerIds(prev => [...prev, answer.id]);
 
-        // Add points to the correct team
-        setGameState(prev => {
-          const updatedScores = [prev.team1Score, prev.team2Score, prev.team3Score, prev.team4Score, prev.team5Score];
-          if (teamIndex >= 1 && teamIndex <= 5) {
-            updatedScores[teamIndex - 1] += answer.points;
-          }
-          return {
-            ...prev,
-            team1Score: updatedScores[0],
-            team2Score: updatedScores[1],
-            team3Score: updatedScores[2],
-            team4Score: updatedScores[3],
-            team5Score: updatedScores[4]
-          };
-        });
+        // Calculate new scores
+        const newScores = [
+          gameState.team1Score,
+          gameState.team2Score,
+          gameState.team3Score,
+          gameState.team4Score,
+          gameState.team5Score
+        ];
+        
+        if (teamIndex >= 1 && teamIndex <= 5) {
+          newScores[teamIndex - 1] += answer.points;
+        }
 
-        // Update game score in database
+        // Add points to the correct team
+        setGameState(prev => ({
+          ...prev,
+          team1Score: newScores[0],
+          team2Score: newScores[1],
+          team3Score: newScores[2],
+          team4Score: newScores[3],
+          team5Score: newScores[4]
+        }));
+
+        // Update game score in database with new calculated scores
         await updateGameScore(
           game.id,
-          teamIndex === 1 ? gameState.team1Score + answer.points : gameState.team1Score,
-          teamIndex === 2 ? gameState.team2Score + answer.points : gameState.team2Score,
-          teamIndex === 3 ? gameState.team3Score + answer.points : gameState.team3Score,
-          teamIndex === 4 ? gameState.team4Score + answer.points : gameState.team4Score,
-          teamIndex === 5 ? gameState.team5Score + answer.points : gameState.team5Score,
+          newScores[0],
+          newScores[1],
+          newScores[2],
+          newScores[3],
+          newScores[4],
           gameState.strikes,
           gameState.currentQuestionIndex
         );
@@ -179,26 +217,43 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
     }
   };
 
-  const addStrike = async () => {
-    if (!game || gameState.strikes >= 3) return;
+  const addStrike = async (teamId?: number) => {
+    if (!game) {
+      console.log('No game found');
+      return;
+    }
 
-    const newStrikes = gameState.strikes + 1;
-    setGameState(prev => ({
-      ...prev,
-      strikes: newStrikes
-    }));
+    if (teamId) {
+      console.log('Adding strike to team', teamId, 'for game', game.id);
+      // Add strike to specific team
+      const success = await addTeamStrike(game.id, teamId);
+      console.log('Strike added successfully:', success);
+      if (success) {
+        // Re-poll game data to get updated strikes
+        pollGameData();
+      }
+    } else {
+      // Add global strike (existing behavior)
+      if (gameState.strikes >= 3) return;
 
-    // Update game score in database
-    await updateGameScore(
-      game.id,
-      gameState.team1Score,
-      gameState.team2Score,
-      gameState.team3Score,
-      gameState.team4Score,
-      gameState.team5Score,
-      newStrikes,
-      gameState.currentQuestionIndex
-    );
+      const newStrikes = gameState.strikes + 1;
+      setGameState(prev => ({
+        ...prev,
+        strikes: newStrikes
+      }));
+
+      // Update game score in database
+      await updateGameScore(
+        game.id,
+        gameState.team1Score,
+        gameState.team2Score,
+        gameState.team3Score,
+        gameState.team4Score,
+        gameState.team5Score,
+        newStrikes,
+        gameState.currentQuestionIndex
+      );
+    }
   };
 
   const startGame = async () => {
@@ -383,6 +438,11 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
       team3Score={gameState.team3Score}
       team4Score={gameState.team4Score}
       team5Score={gameState.team5Score}
+      team1Strikes={game?.team1_strikes || 0}
+      team2Strikes={game?.team2_strikes || 0}
+      team3Strikes={game?.team3_strikes || 0}
+      team4Strikes={game?.team4_strikes || 0}
+      team5Strikes={game?.team5_strikes || 0}
       strikes={gameState.strikes}
       gameStatus={gameStatus}
       onRevealAnswer={revealAnswer}

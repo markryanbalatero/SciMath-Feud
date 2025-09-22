@@ -70,6 +70,11 @@ export interface Game {
   team3_score: number;
   team4_score: number;
   team5_score: number;
+  team1_strikes: number;
+  team2_strikes: number;
+  team3_strikes: number;
+  team4_strikes: number;
+  team5_strikes: number;
   current_question_index: number;
   strikes: number;
   game_status: 'waiting' | 'playing' | 'paused' | 'finished';
@@ -244,26 +249,88 @@ export const updateGameScore = async (
   team4Score: number, 
   team5Score: number, 
   strikes: number, 
-  currentQuestionIndex: number
+  currentQuestionIndex: number,
+  team1Strikes?: number,
+  team2Strikes?: number,
+  team3Strikes?: number,
+  team4Strikes?: number,
+  team5Strikes?: number
 ): Promise<boolean> => {
   try {
+    const updateData: any = {
+      team1_score: team1Score,
+      team2_score: team2Score,
+      team3_score: team3Score,
+      team4_score: team4Score,
+      team5_score: team5Score,
+      strikes: strikes,
+      current_question_index: currentQuestionIndex
+    };
+
+    // Add team strikes if provided
+    if (team1Strikes !== undefined) updateData.team1_strikes = team1Strikes;
+    if (team2Strikes !== undefined) updateData.team2_strikes = team2Strikes;
+    if (team3Strikes !== undefined) updateData.team3_strikes = team3Strikes;
+    if (team4Strikes !== undefined) updateData.team4_strikes = team4Strikes;
+    if (team5Strikes !== undefined) updateData.team5_strikes = team5Strikes;
+
     const { error } = await supabase
       .from('games')
-      .update({
-        team1_score: team1Score,
-        team2_score: team2Score,
-        team3_score: team3Score,
-        team4_score: team4Score,
-        team5_score: team5Score,
-        strikes: strikes,
-        current_question_index: currentQuestionIndex
-      })
+      .update(updateData)
       .eq('id', gameId);
     
     if (error) throw error;
     return true;
   } catch (error) {
     console.error('Error updating game score:', error);
+    return false;
+  }
+};
+
+export const addTeamStrike = async (
+  gameId: string, 
+  teamId: number
+): Promise<boolean> => {
+  try {
+    console.log('Adding strike to team', teamId, 'for game', gameId);
+    
+    // First get current strikes for the team
+    const { data: currentGame, error: fetchError } = await supabase
+      .from('games')
+      .select('team1_strikes, team2_strikes, team3_strikes, team4_strikes, team5_strikes')
+      .eq('id', gameId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching current game:', fetchError);
+      throw fetchError;
+    }
+
+    console.log('Current game strikes:', currentGame);
+    
+    const strikeKeys = ['team1_strikes', 'team2_strikes', 'team3_strikes', 'team4_strikes', 'team5_strikes'];
+    const strikeKey = strikeKeys[teamId - 1] as keyof typeof currentGame;
+    const currentStrikes = (currentGame[strikeKey] as number) || 0;
+    const newStrikes = currentStrikes + 1;
+
+    console.log(`Updating ${strikeKey} from ${currentStrikes} to ${newStrikes}`);
+
+    const { error } = await supabase
+      .from('games')
+      .update({
+        [strikeKey]: newStrikes
+      })
+      .eq('id', gameId);
+    
+    if (error) {
+      console.error('Error updating strikes:', error);
+      throw error;
+    }
+    
+    console.log('Strike updated successfully');
+    return true;
+  } catch (error) {
+    console.error('Error adding team strike:', error);
     return false;
   }
 };

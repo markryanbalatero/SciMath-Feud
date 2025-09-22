@@ -34,36 +34,25 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
     strikes: 0,
     gameStarted: false
   });
-  const [teamStrikes, setTeamStrikes] = useState({
-    team1: 0,
-    team2: 0,
-    team3: 0,
-    team4: 0,
-    team5: 0,
-  });
   const [revealedAnswerIds, setRevealedAnswerIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hostGameStatus, setHostGameStatus] = useState<'waiting' | 'playing' | 'paused' | 'finished'>('waiting');
   const [showStrikeAnimation, setShowStrikeAnimation] = useState(false);
   const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastStrikeCountRef = useRef<number>(0);
+  
+  // Track previous team strikes to detect changes
+  const [prevTeamStrikes, setPrevTeamStrikes] = useState({
+    team1: 0,
+    team2: 0,
+    team3: 0,
+    team4: 0,
+    team5: 0,
+  });
 
   useEffect(() => {
     initializeGame();
   }, [gameCode]);
-
-  // Reset animation state when game changes
-  useEffect(() => {
-    if (game) {
-      setShowStrikeAnimation(false);
-      lastStrikeCountRef.current = 0;
-      if (animationTimeoutRef.current) {
-        clearTimeout(animationTimeoutRef.current);
-        animationTimeoutRef.current = null;
-      }
-    }
-  }, [game?.id]);
 
   // Poll game status and scores every 2 seconds
   useEffect(() => {
@@ -95,28 +84,14 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
           team5: gameData.team5_strikes || 0,
         };
 
-        // Debug logging
-        console.log('Polling game data - current team strikes:', currentTeamStrikes);
-        console.log('Raw game data strikes:', {
-          team1_strikes: gameData.team1_strikes,
-          team2_strikes: gameData.team2_strikes,
-          team3_strikes: gameData.team3_strikes,
-          team4_strikes: gameData.team4_strikes,
-          team5_strikes: gameData.team5_strikes
+        // Check if any team strikes increased (only if animation is not already showing)
+        const strikeIncreased = !showStrikeAnimation && Object.entries(currentTeamStrikes).some(([teamKey, currentStrikes]) => {
+          const prevStrikes = prevTeamStrikes[teamKey as keyof typeof prevTeamStrikes];
+          return currentStrikes > prevStrikes;
         });
 
-        // Update team strikes state
-        setTeamStrikes(currentTeamStrikes);
-
-        // Calculate total strikes across all teams
-        const totalCurrentStrikes = Object.values(currentTeamStrikes).reduce((sum, strikes) => sum + strikes, 0);
-        
-        // Check if total strikes increased and animation is not already showing
-        if (totalCurrentStrikes > lastStrikeCountRef.current && !showStrikeAnimation) {
-          console.log('Strike detected! Total strikes increased from', lastStrikeCountRef.current, 'to', totalCurrentStrikes);
-          
-          // Update the last strike count immediately to prevent multiple triggers
-          lastStrikeCountRef.current = totalCurrentStrikes;
+        if (strikeIncreased) {
+          console.log('Strike detected! Showing animation...', currentTeamStrikes, prevTeamStrikes);
           
           // Clear any existing timeout
           if (animationTimeoutRef.current) {
@@ -130,10 +105,10 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
             setShowStrikeAnimation(false);
             animationTimeoutRef.current = null;
           }, 2000);
-        } else if (totalCurrentStrikes !== lastStrikeCountRef.current && !showStrikeAnimation) {
-          // Update last strike count if it changed but no animation needed
-          lastStrikeCountRef.current = totalCurrentStrikes;
         }
+
+        // Update previous strikes for next comparison
+        setPrevTeamStrikes(currentTeamStrikes);
 
         // Update game state with latest scores and data
         setGameState(prev => ({
@@ -422,11 +397,11 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
         team3Name={game?.team3_custom_name || customTeam3Name || game?.team3?.name}
         team4Name={game?.team4_custom_name || customTeam4Name || game?.team4?.name}
         team5Name={game?.team5_custom_name || customTeam5Name || game?.team5?.name}
-        team1Strikes={teamStrikes.team1}
-        team2Strikes={teamStrikes.team2}
-        team3Strikes={teamStrikes.team3}
-        team4Strikes={teamStrikes.team4}
-        team5Strikes={teamStrikes.team5}
+        team1Strikes={game?.team1_strikes || 0}
+        team2Strikes={game?.team2_strikes || 0}
+        team3Strikes={game?.team3_strikes || 0}
+        team4Strikes={game?.team4_strikes || 0}
+        team5Strikes={game?.team5_strikes || 0}
         strikes={gameState.strikes}
         currentQuestionIndex={gameState.currentQuestionIndex}
         totalQuestions={gameSet.questions.length}
