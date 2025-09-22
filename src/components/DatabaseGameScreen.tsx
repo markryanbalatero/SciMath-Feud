@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import GameBoard from './GameBoard';
-import { getGameSetByCode, createGameWithCustomNames, updateGameScore, revealAnswerInGame, getGameStatus } from '../lib/supabase';
+import { getGameSetByCode, createGameWithCustomNames, updateGameScore, revealAnswerInGame, getGameStatus, getRevealedAnswers, supabase } from '../lib/supabase';
 import type { GameState, Game, GameSet } from '../lib/supabase';
 import { useArduino } from '../hooks/useArduino';
 
@@ -70,57 +70,99 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
     initializeGame();
   }, [gameCode]);
 
-  // Poll game status every 3 seconds
+  // Poll game status and scores every 2 seconds
   useEffect(() => {
     if (!game) return;
-    const pollGameStatus = async () => {
+    const pollGameData = async () => {
       try {
-        const { status, success } = await getGameStatus(game.id);
-        if (success && status) {
-          setHostGameStatus(status as 'waiting' | 'playing' | 'paused' | 'finished');
+        // Fetch both status and game data
+        const { data: gameData, error: gameError } = await supabase
+          .from('games')
+          .select('*')
+          .eq('id', game.id)
+          .single();
+
+        if (gameError || !gameData) {
+          console.error('Error fetching game data:', gameError);
+          return;
         }
+
+        // Update status
+        const newStatus = gameData.game_status as 'waiting' | 'playing' | 'paused' | 'finished';
+        setHostGameStatus(newStatus);
+
+        // Update game state with latest scores and data
+        setGameState(prev => ({
+          ...prev,
+          team1Score: gameData.team1_score || 0,
+          team2Score: gameData.team2_score || 0,
+          team3Score: gameData.team3_score || 0,
+          team4Score: gameData.team4_score || 0,
+          team5Score: gameData.team5_score || 0,
+          strikes: gameData.strikes || 0,
+          currentQuestionIndex: gameData.current_question_index || 0,
+          gameStarted: newStatus === 'playing'
+        }));
+
+        // If game status changed to playing and we're not already started, start the game
+        if (newStatus === 'playing' && !gameState.gameStarted) {
+          setError(null); // Clear any waiting error message
+        }
+
+        // Fetch revealed answers for current question
+        if (newStatus === 'playing') {
+          const revealedAnswers = await getRevealedAnswers(game.id);
+          setRevealedAnswerIds(revealedAnswers);
+        }
+
       } catch (error) {
-        console.error('Error polling game status:', error);
+        console.error('Error polling game data:', error);
       }
     };
 
-    pollGameStatus();
-    const interval = setInterval(pollGameStatus, 3000);
+    pollGameData();
+    const interval = setInterval(pollGameData, 2000); // Poll every 2 seconds for real-time updates
     return () => clearInterval(interval);
-  }, [game]);
+  }, [game, gameState.gameStarted]);
 
   const initializeGame = async () => {
     try {
       setLoading(true);
       setError(null);
-
       // If gameCode is provided, fetch the game set
       if (gameCode) {
         const { gameSet: gameSetData, success, error: gameSetError } = await getGameSetByCode(gameCode);
-        
         if (!success || !gameSetData) {
           setError(gameSetError || 'Game set not found');
           return;
         }
-
         setGameSet(gameSetData);
-
-        // Create a new game session
-        const { game: gameData, success: gameSuccess, error: gameError } = await createGameWithCustomNames(
-          gameSetData.id,
-          customTeam1Name,
-          customTeam2Name,
-          customTeam3Name,
-          customTeam4Name,
-          customTeam5Name
-        );
-
-        if (!gameSuccess || !gameData) {
-          setError(gameError || 'Failed to create game');
+        
+        // Find the latest game for this code
+        const { data: latestGame, error: gameError } = await supabase
+          .from('games')
+          .select('*')
+          .eq('game_set_id', gameSetData.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (gameError || !latestGame) {
+          setError('No game found for this code. Please wait for the host to start the game.');
           return;
         }
-
-        setGame(gameData);
+        
+        // Check if the game is playing
+        if (latestGame.game_status !== 'playing') {
+          setError('Game has not started yet. Please wait for the host to start the game.');
+          setGame(latestGame); // Set the game so polling can work
+          setHostGameStatus(latestGame.game_status);
+          return;
+        }
+        
+        // Game is playing, join it
+        setGame(latestGame);
+        setHostGameStatus(latestGame.game_status);
         setGameState(prev => ({ ...prev, gameStarted: true }));
       }
     } catch (error) {
@@ -204,6 +246,44 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
           <div className="text-white text-3xl font-bold mb-6">🎮 Family Feud</div>
           <div className="text-yellow-400 text-2xl font-bold mb-4">Waiting for Host to Start Game...</div>
           <div className="text-gray-300 text-lg mb-8">Game Code: {gameCode}</div>
+          
+          {/* Team Scores Display */}
+          <div className="mb-8">
+            <div className="text-white text-xl font-bold mb-4">Current Scores</div>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 max-w-4xl mx-auto">
+              {game?.team1_custom_name && (
+                <div className="bg-blue-700 bg-opacity-50 rounded-lg p-4">
+                  <div className="text-white font-bold text-lg">{game.team1_custom_name}</div>
+                  <div className="text-yellow-400 text-2xl font-bold">{gameState.team1Score}</div>
+                </div>
+              )}
+              {game?.team2_custom_name && (
+                <div className="bg-blue-700 bg-opacity-50 rounded-lg p-4">
+                  <div className="text-white font-bold text-lg">{game.team2_custom_name}</div>
+                  <div className="text-yellow-400 text-2xl font-bold">{gameState.team2Score}</div>
+                </div>
+              )}
+              {game?.team3_custom_name && (
+                <div className="bg-blue-700 bg-opacity-50 rounded-lg p-4">
+                  <div className="text-white font-bold text-lg">{game.team3_custom_name}</div>
+                  <div className="text-yellow-400 text-2xl font-bold">{gameState.team3Score}</div>
+                </div>
+              )}
+              {game?.team4_custom_name && (
+                <div className="bg-blue-700 bg-opacity-50 rounded-lg p-4">
+                  <div className="text-white font-bold text-lg">{game.team4_custom_name}</div>
+                  <div className="text-yellow-400 text-2xl font-bold">{gameState.team4Score}</div>
+                </div>
+              )}
+              {game?.team5_custom_name && (
+                <div className="bg-blue-700 bg-opacity-50 rounded-lg p-4">
+                  <div className="text-white font-bold text-lg">{game.team5_custom_name}</div>
+                  <div className="text-yellow-400 text-2xl font-bold">{gameState.team5Score}</div>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="animate-pulse">
             <div className="flex justify-center space-x-2">
               <div className="w-3 h-3 bg-blue-400 rounded-full animate-bounce"></div>
@@ -230,6 +310,44 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
           <div className="text-white text-3xl font-bold mb-6">🎮 Family Feud</div>
           <div className="text-orange-400 text-2xl font-bold mb-4">Game Paused</div>
           <div className="text-gray-300 text-lg mb-8">Waiting for host to resume...</div>
+          
+          {/* Team Scores Display */}
+          <div className="mb-8">
+            <div className="text-white text-xl font-bold mb-4">Current Scores</div>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 max-w-4xl mx-auto">
+              {game?.team1_custom_name && (
+                <div className="bg-orange-700 bg-opacity-50 rounded-lg p-4">
+                  <div className="text-white font-bold text-lg">{game.team1_custom_name}</div>
+                  <div className="text-yellow-400 text-2xl font-bold">{gameState.team1Score}</div>
+                </div>
+              )}
+              {game?.team2_custom_name && (
+                <div className="bg-orange-700 bg-opacity-50 rounded-lg p-4">
+                  <div className="text-white font-bold text-lg">{game.team2_custom_name}</div>
+                  <div className="text-yellow-400 text-2xl font-bold">{gameState.team2Score}</div>
+                </div>
+              )}
+              {game?.team3_custom_name && (
+                <div className="bg-orange-700 bg-opacity-50 rounded-lg p-4">
+                  <div className="text-white font-bold text-lg">{game.team3_custom_name}</div>
+                  <div className="text-yellow-400 text-2xl font-bold">{gameState.team3Score}</div>
+                </div>
+              )}
+              {game?.team4_custom_name && (
+                <div className="bg-orange-700 bg-opacity-50 rounded-lg p-4">
+                  <div className="text-white font-bold text-lg">{game.team4_custom_name}</div>
+                  <div className="text-yellow-400 text-2xl font-bold">{gameState.team4Score}</div>
+                </div>
+              )}
+              {game?.team5_custom_name && (
+                <div className="bg-orange-700 bg-opacity-50 rounded-lg p-4">
+                  <div className="text-white font-bold text-lg">{game.team5_custom_name}</div>
+                  <div className="text-yellow-400 text-2xl font-bold">{gameState.team5Score}</div>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="animate-pulse">
             <div className="w-16 h-16 bg-orange-400 rounded-full mx-auto"></div>
           </div>
