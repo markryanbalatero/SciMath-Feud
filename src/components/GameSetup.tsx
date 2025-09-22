@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { getGameSetByCode, getGameStatus } from '../lib/supabase';
+import { getGameSetByCode } from '../lib/supabase';
 import type { GameSet } from '../lib/supabase';
 import DatabaseGameScreen from './DatabaseGameScreen';
 import { supabase } from '../lib/supabase';
