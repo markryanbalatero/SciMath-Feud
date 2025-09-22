@@ -136,7 +136,7 @@ export const getGameSetByCode = async (code: string): Promise<{ gameSet: GameSet
           answers (*)
         )
       `)
-      .eq('code', code.toUpperCase())
+  .ilike('code', code)
       .eq('is_active', true)
       .single();
     
@@ -333,16 +333,15 @@ export const updateGameStatus = async (
   }
 };
 
-export const getGameStatus = async (gameId: string): Promise<{ status: string | null; success: boolean; error?: string }> => {
+export const getGameStatus = async (code: string): Promise<{ status: string | null; success: boolean; error?: string }> => {
   try {
     const { data, error } = await supabase
       .from('games')
-      .select('game_status, started_at, finished_at')
-      .eq('id', gameId)
+      .select('game_status')
+      .eq('id', code)
       .single();
-    
     if (error) throw error;
-    return { status: data?.game_status || null, success: true };
+    return { status: data?.game_status || null, success: !!data?.game_status };
   } catch (error) {
     console.error('Error fetching game status:', error);
     return { status: null, success: false, error: 'Failed to fetch game status' };

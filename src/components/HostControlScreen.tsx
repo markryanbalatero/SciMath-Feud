@@ -26,48 +26,88 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
   const [error, setError] = useState<string | null>(null);
   const [gameStarted, setGameStarted] = useState(false);
   const [gameStatus, setGameStatus] = useState<'waiting' | 'playing' | 'paused' | 'finished'>('waiting');
+  // Team name states
+  const [customTeam1Name, setCustomTeam1Name] = useState('');
+  const [customTeam2Name, setCustomTeam2Name] = useState('');
+  const [customTeam3Name, setCustomTeam3Name] = useState('');
+  const [customTeam4Name, setCustomTeam4Name] = useState('');
+  const [customTeam5Name, setCustomTeam5Name] = useState('');
+  // Step state
+  const [step, setStep] = useState<'code' | 'teams' | 'control'>('code');
 
-  const loadGame = async () => {
+  // Step 1: Validate game code
+  const validateGameCode = async () => {
     if (!gameCode.trim()) {
       setError('Please enter a game code');
       return;
     }
-
     setLoading(true);
     setError(null);
-
     try {
-      // Load game set
       const { gameSet: gameSetData, success, error: gameSetError } = await getGameSetByCode(gameCode.trim());
-      
       if (!success || !gameSetData) {
         setError(gameSetError || 'Game set not found');
+        setGameSet(null);
         return;
       }
-
       setGameSet(gameSetData);
+      setError(null);
+      setStep('teams');
+    } catch (error) {
+      setError('Failed to validate game code');
+      setGameSet(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      // Create a new game session for host control
+  // Step 2: Create game and start after team names
+  const startHostGame = async () => {
+    if (!gameSet) {
+      setError('Please validate game code first');
+      return;
+    }
+    // Get team names from custom inputs
+    const teamNames = [
+      customTeam1Name.trim(),
+      customTeam2Name.trim(),
+      customTeam3Name.trim(),
+      customTeam4Name.trim(),
+      customTeam5Name.trim()
+    ].filter(name => name !== '');
+    if (teamNames.length < 2) {
+      setError('Please enter names for at least 2 teams');
+      return;
+    }
+    // Check for duplicate team names
+    const uniqueTeams = new Set(teamNames);
+    if (uniqueTeams.size !== teamNames.length) {
+      setError('Please use different names for each team');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
       const { game: gameData, success: gameSuccess, error: gameError } = await createGameWithCustomNames(
-        gameSetData.id,
-        'Team 1',
-        'Team 2', 
-        'Team 3',
-        'Team 4',
-        'Team 5'
+        gameSet.id,
+        customTeam1Name.trim(),
+        customTeam2Name.trim(),
+        customTeam3Name.trim(),
+        customTeam4Name.trim(),
+        customTeam5Name.trim()
       );
-
       if (!gameSuccess || !gameData) {
         setError(gameError || 'Failed to create game');
         return;
       }
-
+      await updateGameStatus(gameData.id, 'playing');
+      setGameStatus('playing');
       setGame(gameData);
       setGameStarted(true);
+      setStep('control');
       setError(null);
     } catch (error) {
-      console.error('Failed to load game:', error);
-      setError('Failed to load game. Please try again.');
+      setError('Failed to start game');
     } finally {
       setLoading(false);
     }
@@ -195,20 +235,16 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
     }
   };
 
-  if (!gameStarted) {
+  // Step UI
+  if (step === 'code') {
     return (
       <div className="w-screen h-screen fixed inset-0 overflow-hidden bg-[#1f225d] flex items-center justify-center">
         <div className="max-w-md w-full mx-4">
           <div className="bg-[#2a2e6b] rounded-xl shadow-2xl p-8 border border-purple-400/30">
-            <h1 className="text-3xl font-black text-center mb-8 text-white">
-              🎛️ HOST CONTROL
-            </h1>
-
+            <h1 className="text-3xl font-black text-center mb-8 text-white">🎛️ HOST CONTROL</h1>
             {/* Game Code Input */}
             <div className="mb-6">
-              <label className="block text-purple-300 font-bold mb-2 text-lg">
-                Enter Game Code
-              </label>
+              <label className="block text-purple-300 font-bold mb-2 text-lg">Enter Game Code</label>
               <div className="flex space-x-2">
                 <input
                   type="text"
@@ -219,15 +255,14 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
                   maxLength={20}
                 />
                 <button
-                  onClick={loadGame}
+                  onClick={validateGameCode}
                   disabled={loading}
                   className="px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white font-bold rounded-xl transition-all duration-200"
                 >
-                  {loading ? 'Loading...' : 'Load'}
+                  {loading ? 'Checking...' : 'Validate'}
                 </button>
               </div>
             </div>
-
             {/* Game Set Info */}
             {gameSet && (
               <div className="mb-6 p-4 bg-green-600/20 border border-green-400/50 rounded-xl">
@@ -235,19 +270,15 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
                 {gameSet.description && (
                   <p className="text-green-200 mb-2">{gameSet.description}</p>
                 )}
-                <p className="text-sm text-green-100">
-                  {gameSet.questions?.length || 0} questions available
-                </p>
+                <p className="text-sm text-green-100">{gameSet.questions?.length || 0} questions available</p>
               </div>
             )}
-
             {/* Error Message */}
             {error && (
               <div className="mb-6 p-4 bg-red-600/20 border border-red-400/50 rounded-xl">
                 <p className="text-red-300 font-medium">{error}</p>
               </div>
             )}
-
             {/* Action Buttons */}
             <div className="flex space-x-4">
               <button
@@ -256,15 +287,57 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
               >
                 ← Back to Welcome
               </button>
-              
               {gameSet && (
                 <button
-                  onClick={() => setGameStarted(true)}
+                  onClick={() => setStep('teams')}
                   className="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-all duration-200"
                 >
-                  Start Host Control
+                  Next: Enter Teams
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (step === 'teams') {
+    return (
+      <div className="w-screen h-screen fixed inset-0 overflow-hidden bg-[#1f225d] flex items-center justify-center">
+        <div className="max-w-md w-full mx-4">
+          <div className="bg-[#2a2e6b] rounded-xl shadow-2xl p-8 border border-purple-400/30">
+            <h1 className="text-3xl font-black text-center mb-8 text-white">Enter Team Names</h1>
+            {/* Team Name Inputs */}
+            <div className="space-y-4 mb-6">
+              <div className="grid grid-cols-1 gap-4">
+                <input type="text" value={customTeam1Name} onChange={e => setCustomTeam1Name(e.target.value)} placeholder="Team 1 Name" className="w-full px-4 py-3 text-lg border-2 border-purple-400 rounded-xl focus:border-pink-400 focus:outline-none bg-[#1f225d] text-white" />
+                <input type="text" value={customTeam2Name} onChange={e => setCustomTeam2Name(e.target.value)} placeholder="Team 2 Name" className="w-full px-4 py-3 text-lg border-2 border-purple-400 rounded-xl focus:border-pink-400 focus:outline-none bg-[#1f225d] text-white" />
+                <input type="text" value={customTeam3Name} onChange={e => setCustomTeam3Name(e.target.value)} placeholder="Team 3 Name" className="w-full px-4 py-3 text-lg border-2 border-purple-400 rounded-xl focus:border-pink-400 focus:outline-none bg-[#1f225d] text-white" />
+                <input type="text" value={customTeam4Name} onChange={e => setCustomTeam4Name(e.target.value)} placeholder="Team 4 Name" className="w-full px-4 py-3 text-lg border-2 border-purple-400 rounded-xl focus:border-pink-400 focus:outline-none bg-[#1f225d] text-white" />
+                <input type="text" value={customTeam5Name} onChange={e => setCustomTeam5Name(e.target.value)} placeholder="Team 5 Name" className="w-full px-4 py-3 text-lg border-2 border-purple-400 rounded-xl focus:border-pink-400 focus:outline-none bg-[#1f225d] text-white" />
+              </div>
+            </div>
+            {/* Error Message */}
+            {error && (
+              <div className="mb-6 p-4 bg-red-600/20 border border-red-400/50 rounded-xl">
+                <p className="text-red-300 font-medium">{error}</p>
+              </div>
+            )}
+            {/* Action Buttons */}
+            <div className="flex space-x-4">
+              <button
+                onClick={() => setStep('code')}
+                className="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-xl transition-all duration-200"
+              >
+                ← Back
+              </button>
+              <button
+                onClick={startHostGame}
+                disabled={loading}
+                className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold rounded-xl transition-all duration-200"
+              >
+                {loading ? 'Starting...' : 'Start Game'}
+              </button>
             </div>
           </div>
         </div>
@@ -300,11 +373,11 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
       currentQuestionIndex={gameState.currentQuestionIndex}
       totalQuestions={gameSet.questions.length}
       answers={answersWithRevealState}
-      team1Name="TEAM NAME (1)"
-      team2Name="TEAM NAME (2)"
-      team3Name="TEAM NAME (3)"
-      team4Name="TEAM NAME (4)"
-      team5Name="TEAM NAME (5)"
+      team1Name={customTeam1Name || "TEAM NAME (1)"}
+      team2Name={customTeam2Name || "TEAM NAME (2)"}
+      team3Name={customTeam3Name || "TEAM NAME (3)"}
+      team4Name={customTeam4Name || "TEAM NAME (4)"}
+      team5Name={customTeam5Name || "TEAM NAME (5)"}
       team1Score={gameState.team1Score}
       team2Score={gameState.team2Score}
       team3Score={gameState.team3Score}

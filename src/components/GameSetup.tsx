@@ -1,42 +1,40 @@
 import React, { useState } from 'react';
-import { getGameSetByCode } from '../lib/supabase';
+import { getGameSetByCode, getGameStatus } from '../lib/supabase';
 import type { GameSet } from '../lib/supabase';
 import DatabaseGameScreen from './DatabaseGameScreen';
+import { supabase } from '../lib/supabase';
 
 interface GameSetupProps {
   onBackToWelcome: () => void;
 }
 
 const GameSetup: React.FC<GameSetupProps> = ({ onBackToWelcome }) => {
+  // Polling for game status
+  const [polling, setPolling] = useState(false);
+  const [game, setGame] = useState<any | null>(null);
   const [gameCode, setGameCode] = useState('');
-  const [customTeam1Name, setCustomTeam1Name] = useState<string>('');
-  const [customTeam2Name, setCustomTeam2Name] = useState<string>('');
-  const [customTeam3Name, setCustomTeam3Name] = useState<string>('');
-  const [customTeam4Name, setCustomTeam4Name] = useState<string>('');
-  const [customTeam5Name, setCustomTeam5Name] = useState<string>('');
+  // Team names will be fetched from gameSet
   const [gameSet, setGameSet] = useState<GameSet | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [gameStarted, setGameStarted] = useState(false);
+  // Remove gameStatus, only validate code
 
   const validateGameCode = async () => {
+    
     if (!gameCode.trim()) {
       setError('Please enter a game code');
       return;
     }
-
     setLoading(true);
     setError(null);
-
     try {
       const { gameSet: gameSetData, success, error: gameSetError } = await getGameSetByCode(gameCode.trim());
-      
       if (!success || !gameSetData) {
         setError(gameSetError || 'Game set not found');
         setGameSet(null);
         return;
       }
-
       setGameSet(gameSetData);
       setError(null);
     } catch (error) {
@@ -52,30 +50,52 @@ const GameSetup: React.FC<GameSetupProps> = ({ onBackToWelcome }) => {
       setError('Please enter a valid game code first');
       return;
     }
-
-    // Get team names from custom inputs
-    const teamNames = [
-      customTeam1Name.trim(),
-      customTeam2Name.trim(),
-      customTeam3Name.trim(),
-      customTeam4Name.trim(),
-      customTeam5Name.trim()
-    ].filter(name => name !== '');
-
-    // Check if at least 2 teams are named
-    if (teamNames.length < 2) {
-      setError('Please enter names for at least 2 teams');
-      return;
+    // Fetch the latest game for this code
+    const fetchGame = async () => {
+      const { data, error } = await supabase
+        .from('games')
+        .select('*')
+        .eq('game_set_id', gameSet.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      if (error || !data) {
+        setError('No game found for this code.');
+        return;
+      }
+      if (data.game_status !== 'playing') {
+        setError('Waiting for host to start the game.');
+        setPolling(true);
+        return;
+      }
+      setGame(data);
+      setGameStarted(true);
+      setPolling(false);
+    };
+    fetchGame();
+  // Poll for game status if waiting
+  React.useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (polling && gameSet) {
+      interval = setInterval(async () => {
+        const { data, error } = await supabase
+          .from('games')
+          .select('*')
+          .eq('game_set_id', gameSet.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+        if (!error && data && data.game_status === 'playing') {
+          setGame(data);
+          setGameStarted(true);
+          setPolling(false);
+        }
+      }, 2000); // poll every 2 seconds
     }
-
-    // Check for duplicate team names
-    const uniqueTeams = new Set(teamNames);
-    if (uniqueTeams.size !== teamNames.length) {
-      setError('Please use different names for each team');
-      return;
-    }
-
-    setGameStarted(true);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [polling, gameSet]);
   };
 
   if (gameStarted) {
@@ -83,11 +103,11 @@ const GameSetup: React.FC<GameSetupProps> = ({ onBackToWelcome }) => {
       <DatabaseGameScreen
         onBackToWelcome={onBackToWelcome}
         gameCode={gameCode}
-        customTeam1Name={customTeam1Name.trim()}
-        customTeam2Name={customTeam2Name.trim()}
-        customTeam3Name={customTeam3Name.trim()}
-        customTeam4Name={customTeam4Name.trim()}
-        customTeam5Name={customTeam5Name.trim()}
+        customTeam1Name={game?.team1_custom_name || "TEAM NAME (1)"}
+        customTeam2Name={game?.team2_custom_name || "TEAM NAME (2)"}
+        customTeam3Name={game?.team3_custom_name || "TEAM NAME (3)"}
+        customTeam4Name={game?.team4_custom_name || "TEAM NAME (4)"}
+        customTeam5Name={game?.team5_custom_name || "TEAM NAME (5)"}
       />
     );
   }
@@ -149,84 +169,7 @@ const GameSetup: React.FC<GameSetupProps> = ({ onBackToWelcome }) => {
             </div>
           )}
 
-          {/* Team Names */}
-          {gameSet && (
-            <div className="space-y-4 mb-6">
-              <h3 className="text-xl font-bold text-gray-700 mb-4">Enter Team Names (minimum 2 required)</h3>
-              
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Team 1 */}
-                <div>
-                  <label className="block text-lg font-bold text-gray-700 mb-2">
-                    Team 1 (Left Top)
-                  </label>
-                  <input
-                    type="text"
-                    value={customTeam1Name}
-                    onChange={(e) => setCustomTeam1Name(e.target.value)}
-                    placeholder="Enter team name"
-                    className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-
-                {/* Team 2 */}
-                <div>
-                  <label className="block text-lg font-bold text-gray-700 mb-2">
-                    Team 2 (Left Bottom)
-                  </label>
-                  <input
-                    type="text"
-                    value={customTeam2Name}
-                    onChange={(e) => setCustomTeam2Name(e.target.value)}
-                    placeholder="Enter team name"
-                    className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-
-                {/* Team 3 */}
-                <div>
-                  <label className="block text-lg font-bold text-gray-700 mb-2">
-                    Team 3 (Bottom)
-                  </label>
-                  <input
-                    type="text"
-                    value={customTeam3Name}
-                    onChange={(e) => setCustomTeam3Name(e.target.value)}
-                    placeholder="Enter team name"
-                    className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-
-                {/* Team 4 */}
-                <div>
-                  <label className="block text-lg font-bold text-gray-700 mb-2">
-                    Team 4 (Right Top)
-                  </label>
-                  <input
-                    type="text"
-                    value={customTeam4Name}
-                    onChange={(e) => setCustomTeam4Name(e.target.value)}
-                    placeholder="Enter team name"
-                    className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-
-                {/* Team 5 */}
-                <div>
-                  <label className="block text-lg font-bold text-gray-700 mb-2">
-                    Team 5 (Right Bottom)
-                  </label>
-                  <input
-                    type="text"
-                    value={customTeam5Name}
-                    onChange={(e) => setCustomTeam5Name(e.target.value)}
-                    placeholder="Enter team name"
-                    className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Team Names: Removed for player, fetched from gameSet */}
 
           {/* Error Message */}
           {error && (
@@ -245,10 +188,10 @@ const GameSetup: React.FC<GameSetupProps> = ({ onBackToWelcome }) => {
             </button>
             <button
               onClick={startGame}
-              disabled={!gameSet || (!customTeam1Name.trim() && !customTeam2Name.trim() && !customTeam3Name.trim() && !customTeam4Name.trim() && !customTeam5Name.trim())}
+              disabled={!gameSet}
               className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold rounded-xl transition-all duration-200"
             >
-              Start Game
+              Join Game
             </button>
           </div>
         </div>
