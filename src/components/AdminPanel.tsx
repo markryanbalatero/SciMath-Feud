@@ -162,120 +162,258 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToWelcome }) => {
         </div>
 
         {/* Admin Form */}
-        <div className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-md rounded-xl border-2 border-yellow-400/40 p-6 shadow-2xl">
+        <div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 p-8 shadow-2xl">
           
           {/* Game Info Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div>
-              <label className="block text-yellow-300 font-bold mb-2 text-lg">Game Title *</label>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+            <div className="space-y-2">
+              <label className="block text-yellow-300 font-bold mb-3 text-xl flex items-center">
+                <span className="text-2xl mr-2">🎮</span>
+                Game Title *
+              </label>
               <input
                 type="text"
                 value={gameTitle}
                 onChange={(e) => setGameTitle(e.target.value)}
-                className="w-full px-4 py-3 bg-blue-900/80 border-2 border-blue-600 rounded-lg text-white text-lg font-semibold focus:border-yellow-400 focus:outline-none transition-colors"
+                className="w-full px-6 py-4 bg-white/10 backdrop-blur border-2 border-purple-400/50 rounded-xl text-white text-lg font-semibold focus:border-yellow-400 focus:outline-none transition-all duration-200 placeholder-purple-300"
                 placeholder="Enter game title (e.g., 'Office Party Quiz')"
+                maxLength={100}
               />
+              <div className="text-right text-xs text-purple-300">{gameTitle.length}/100</div>
             </div>
-            <div>
-              <label className="block text-yellow-300 font-bold mb-2 text-lg">Description (Optional)</label>
-              <input
-                type="text"
+            <div className="space-y-2">
+              <label className="block text-yellow-300 font-bold mb-3 text-xl flex items-center">
+                <span className="text-2xl mr-2">📝</span>
+                Description (Optional)
+              </label>
+              <textarea
                 value={gameDescription}
                 onChange={(e) => setGameDescription(e.target.value)}
-                className="w-full px-4 py-3 bg-gray-800/80 border-2 border-gray-600 rounded-lg text-white text-lg font-semibold focus:border-yellow-400 focus:outline-none transition-colors"
-                placeholder="Brief description of your game"
+                rows={3}
+                className="w-full px-6 py-4 bg-white/10 backdrop-blur border-2 border-purple-400/50 rounded-xl text-white text-lg font-semibold focus:border-yellow-400 focus:outline-none transition-all duration-200 placeholder-purple-300 resize-none"
+                placeholder="Brief description of your game..."
+                maxLength={300}
               />
+              <div className="text-right text-xs text-purple-300">{gameDescription.length}/300</div>
             </div>
           </div>
 
           {/* Questions Section */}
-          <div className="mb-8">
-            <div className="flex justify-between items-center mb-4">
-              <label className="block text-yellow-300 font-bold text-lg">Questions ({questions.length})</label>
+          <div className="mb-10">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+              <div>
+                <h2 className="text-yellow-300 font-bold text-2xl flex items-center mb-2">
+                  <span className="text-3xl mr-3">❓</span>
+                  Questions ({questions.length})
+                </h2>
+                <p className="text-purple-200 text-sm">Add survey questions with up to 8 answers each</p>
+              </div>
               <button
                 onClick={addQuestion}
-                className="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg transition-colors"
+                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold px-6 py-3 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center"
               >
-                + Add Question
+                <span className="text-xl mr-2">➕</span>
+                Add Question
               </button>
             </div>
 
-            {questions.map((question, questionIndex) => (
-              <div key={questionIndex} className="mb-8 p-4 bg-gray-700/50 rounded-lg border border-gray-600">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-white font-bold text-lg">Question {questionIndex + 1}</h3>
-                  {questions.length > 1 && (
-                    <button
-                      onClick={() => removeQuestion(questionIndex)}
-                      className="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1 rounded transition-colors"
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
+            <div className="space-y-8">
+              {questions.map((question, questionIndex) => (
+                <div key={questionIndex} className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur rounded-2xl border border-gray-600/50 p-6 shadow-xl">
+                  <div className="flex justify-between items-center mb-6">
+                    <div className="flex items-center">
+                      <span className="bg-yellow-500 text-black font-black text-lg w-10 h-10 rounded-full flex items-center justify-center mr-4">
+                        {questionIndex + 1}
+                      </span>
+                      <h3 className="text-white font-bold text-xl">Question {questionIndex + 1}</h3>
+                    </div>
+                    {questions.length > 1 && (
+                      <button
+                        onClick={() => removeQuestion(questionIndex)}
+                        className="bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg transition-all duration-200 transform hover:scale-105 flex items-center"
+                      >
+                        <span className="mr-1">🗑️</span>
+                        Remove
+                      </button>
+                    )}
+                  </div>
 
-                {/* Question Text */}
-                <div className="mb-4">
-                  <label className="block text-yellow-300 font-bold mb-2">Question Text *</label>
-                  <textarea
-                    value={question.question}
-                    onChange={(e) => handleQuestionChange(questionIndex, e.target.value)}
-                    rows={3}
-                    className="w-full px-4 py-3 bg-gray-800/80 border-2 border-gray-600 rounded-lg text-white text-lg font-semibold focus:border-yellow-400 focus:outline-none transition-colors resize-none"
-                    placeholder="Enter your survey question (e.g., 'Name something you might find in a kitchen')"
-                  />
-                </div>
+                  {/* Question Text */}
+                  <div className="mb-8">
+                    <label className="block text-yellow-300 font-bold mb-3 text-lg flex items-center">
+                      <span className="text-xl mr-2">💭</span>
+                      Question Text *
+                    </label>
+                    <textarea
+                      value={question.question}
+                      onChange={(e) => handleQuestionChange(questionIndex, e.target.value)}
+                      rows={2}
+                      className="w-full px-6 py-4 bg-white/10 backdrop-blur border-2 border-blue-400/50 rounded-xl text-white text-lg font-semibold focus:border-yellow-400 focus:outline-none transition-all duration-200 resize-none placeholder-blue-300"
+                      placeholder="Enter your survey question (e.g., 'Name something you might find in a kitchen')"
+                      maxLength={200}
+                    />
+                    <div className="text-right text-xs text-blue-300 mt-1">{question.question.length}/200</div>
+                  </div>
 
-                {/* Answers */}
-                <div>
-                  <label className="block text-yellow-300 font-bold mb-4">Answers (Top 8)</label>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                    {question.answers.map((answer, answerIndex) => (
-                      <div key={answerIndex} className="flex gap-3 items-center">
-                        <div className="flex-shrink-0 w-8 h-8 bg-yellow-500 text-black font-black rounded-full flex items-center justify-center text-sm">
-                          {answerIndex + 1}
-                        </div>
-                        <input
-                          type="text"
-                          value={answer.text}
-                          onChange={(e) => handleAnswerChange(questionIndex, answerIndex, 'text', e.target.value)}
-                          className="flex-1 px-3 py-2 bg-gray-800/80 border border-gray-500 rounded-lg text-white font-medium focus:border-yellow-400 focus:outline-none transition-colors"
-                          placeholder={`Answer ${answerIndex + 1}`}
-                        />
-                        <input
-                          type="number"
-                          value={answer.points || ''}
-                          onChange={(e) => handleAnswerChange(questionIndex, answerIndex, 'points', parseInt(e.target.value) || 0)}
-                          className="w-20 px-3 py-2 bg-orange-800/80 border border-orange-600 rounded-lg text-white font-bold text-center focus:border-yellow-400 focus:outline-none transition-colors"
-                          placeholder="Pts"
-                          min="0"
-                          max="100"
-                        />
+                  {/* Answers */}
+                  <div>
+                    <label className="block text-yellow-300 font-bold mb-4 text-lg flex items-center">
+                      <span className="text-xl mr-2">📊</span>
+                      Answers (Ranked 1-8)
+                    </label>
+                    
+                    {/* Answers 1-4 (Top Row) */}
+                    <div className="mb-4">
+                      <h4 className="text-white font-semibold mb-3 text-sm uppercase tracking-wide">Top Answers (1-4)</h4>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-3">
+                        {question.answers.slice(0, 4).map((answer, answerIndex) => (
+                          <div key={answerIndex} className="space-y-2">
+                            <div className="flex gap-2 items-center p-3 bg-white/5 rounded-lg border border-gray-600/30 hover:border-yellow-400/50 transition-all duration-200">
+                              <div className="flex-shrink-0 w-7 h-7 bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-black rounded-full flex items-center justify-center text-sm">
+                                {answerIndex + 1}
+                              </div>
+                              <div className="flex-1 space-y-2">
+                                <input
+                                  type="text"
+                                  value={answer.text}
+                                  onChange={(e) => handleAnswerChange(questionIndex, answerIndex, 'text', e.target.value)}
+                                  className="w-full px-3 py-2 bg-white/10 backdrop-blur border border-gray-500/50 rounded-lg text-white font-medium focus:border-yellow-400 focus:outline-none transition-all duration-200 placeholder-gray-400 text-sm"
+                                  placeholder={`Answer ${answerIndex + 1}`}
+                                  maxLength={50}
+                                />
+                                <input
+                                  type="number"
+                                  value={answer.points || ''}
+                                  onChange={(e) => handleAnswerChange(questionIndex, answerIndex, 'points', parseInt(e.target.value) || 0)}
+                                  className="w-full px-3 py-2 bg-gradient-to-r from-orange-600/80 to-red-600/80 backdrop-blur border border-orange-500/50 rounded-lg text-white font-bold text-center focus:border-yellow-400 focus:outline-none transition-all duration-200 text-sm"
+                                  placeholder="Points"
+                                  min="0"
+                                  max="100"
+                                />
+                              </div>
+                            </div>
+                            {answer.text && (
+                              <div className="text-right text-xs text-gray-400">{answer.text.length}/50</div>
+                            )}
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
+
+                    {/* Answers 5-8 (Bottom Row) */}
+                    <div className="mb-4">
+                      <h4 className="text-white font-semibold mb-3 text-sm uppercase tracking-wide">Lower Answers (5-8)</h4>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-3">
+                        {question.answers.slice(4, 8).map((answer, answerIndex) => (
+                          <div key={answerIndex + 4} className="space-y-2">
+                            <div className="flex gap-2 items-center p-3 bg-white/5 rounded-lg border border-gray-600/30 hover:border-yellow-400/50 transition-all duration-200">
+                              <div className="flex-shrink-0 w-7 h-7 bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-black rounded-full flex items-center justify-center text-sm">
+                                {answerIndex + 5}
+                              </div>
+                              <div className="flex-1 space-y-2">
+                                <input
+                                  type="text"
+                                  value={answer.text}
+                                  onChange={(e) => handleAnswerChange(questionIndex, answerIndex + 4, 'text', e.target.value)}
+                                  className="w-full px-3 py-2 bg-white/10 backdrop-blur border border-gray-500/50 rounded-lg text-white font-medium focus:border-yellow-400 focus:outline-none transition-all duration-200 placeholder-gray-400 text-sm"
+                                  placeholder={`Answer ${answerIndex + 5}`}
+                                  maxLength={50}
+                                />
+                                <input
+                                  type="number"
+                                  value={answer.points || ''}
+                                  onChange={(e) => handleAnswerChange(questionIndex, answerIndex + 4, 'points', parseInt(e.target.value) || 0)}
+                                  className="w-full px-3 py-2 bg-gradient-to-r from-orange-600/80 to-red-600/80 backdrop-blur border border-orange-500/50 rounded-lg text-white font-bold text-center focus:border-yellow-400 focus:outline-none transition-all duration-200 text-sm"
+                                  placeholder="Points"
+                                  min="0"
+                                  max="100"
+                                />
+                              </div>
+                            </div>
+                            {answer.text && (
+                              <div className="text-right text-xs text-gray-400">{answer.text.length}/50</div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Simplified Tips */}
+                    <div className="mt-4 p-3 bg-blue-500/10 border border-blue-400/30 rounded-lg">
+                      <div className="flex items-center text-blue-300 text-sm">
+                        <span className="mr-2">💡</span>
+                        <span><strong>Tip:</strong> Rank answers 1-8 by popularity. Higher ranks (1-4) should have more points than lower ranks (5-8).</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
-              onClick={onBackToWelcome}
-              className="px-8 py-4 bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-500 hover:to-gray-600 text-white font-bold text-lg rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200 border-2 border-gray-500 hover:border-gray-400"
-            >
-              ← Back to Menu
-            </button>
-            <button
-              onClick={handleSaveGameSet}
-              disabled={isLoading}
-              className={`px-12 py-4 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white font-black text-xl rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200 border-2 border-green-500 hover:border-green-400 ${
-                isLoading ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              {isLoading ? '💾 Saving...' : '💾 SAVE GAME SET'}
-            </button>
+          <div className="border-t border-white/20 pt-8">
+            <div className="flex flex-col lg:flex-row gap-6 justify-center items-center">
+              <button
+                onClick={onBackToWelcome}
+                className="px-8 py-4 bg-white/10 hover:bg-white/20 text-white font-bold text-lg rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200 border border-white/30 flex items-center backdrop-blur"
+              >
+                <span className="text-xl mr-2">⬅️</span>
+                Back to Menu
+              </button>
+              
+              {/* Save Button with Validation Indicator */}
+              <div className="relative">
+                <button
+                  onClick={handleSaveGameSet}
+                  disabled={isLoading || !gameTitle.trim()}
+                  className={`px-12 py-4 font-black text-xl rounded-xl shadow-lg transform transition-all duration-200 border-2 flex items-center ${
+                    isLoading || !gameTitle.trim()
+                      ? 'bg-gray-500 border-gray-400 cursor-not-allowed opacity-50' 
+                      : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 border-green-500 hover:border-green-400 hover:scale-105'
+                  } text-white`}
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-3"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-2xl mr-3">💾</span>
+                      SAVE GAME SET
+                    </>
+                  )}
+                </button>
+                
+                {/* Validation Message */}
+                {!gameTitle.trim() && (
+                  <div className="absolute -bottom-8 left-0 right-0 text-center">
+                    <span className="text-red-300 text-sm">⚠️ Game title required</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Quick Stats */}
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+              <div className="bg-blue-500/20 border border-blue-400/50 rounded-lg p-4">
+                <div className="text-2xl text-blue-300 font-bold">{questions.length}</div>
+                <div className="text-blue-200 text-sm">Questions</div>
+              </div>
+              <div className="bg-green-500/20 border border-green-400/50 rounded-lg p-4">
+                <div className="text-2xl text-green-300 font-bold">
+                  {questions.reduce((total, q) => total + q.answers.filter(a => a.text.trim() !== '').length, 0)}
+                </div>
+                <div className="text-green-200 text-sm">Total Answers</div>
+              </div>
+              <div className="bg-purple-500/20 border border-purple-400/50 rounded-lg p-4">
+                <div className="text-2xl text-purple-300 font-bold">
+                  {questions.filter(q => q.question.trim() !== '' && q.answers.some(a => a.text.trim() !== '')).length}
+                </div>
+                <div className="text-purple-200 text-sm">Complete Questions</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

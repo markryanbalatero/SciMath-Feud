@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import HostControl from './HostControl';
+import HostControl from './Answer';
 import { getGameSetByCode, createGameWithCustomNames, updateGameScore, revealAnswerInGame, updateGameStatus, addTeamStrike, supabase } from '../lib/supabase';
 import type { GameState, Game, GameSet } from '../lib/supabase';
 
@@ -203,17 +203,68 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
     }
   };
 
-  const nextQuestion = () => {
-    if (!gameSet?.questions) return;
+  const revealAnswerNoPoints = async (answerIndex: number) => {
+    if (!gameSet?.questions || !game) return;
+
+    const currentQuestion = gameSet.questions[gameState.currentQuestionIndex];
+    if (!currentQuestion || answerIndex >= currentQuestion.answers.length) return;
+
+    const answer = currentQuestion.answers[answerIndex];
+    if (revealedAnswerIds.includes(answer.id)) return;
+
+    try {
+      // Add to revealed answers in database without awarding points (team 0)
+      const success = await revealAnswerInGame(game.id, answer.id, 0);
+
+      if (success) {
+        // Update local state - just reveal the answer without changing scores
+        setRevealedAnswerIds(prev => [...prev, answer.id]);
+      }
+    } catch (error) {
+      console.error('Failed to reveal answer without points:', error);
+    }
+  };
+
+  const nextQuestion = async () => {
+    if (!gameSet?.questions || !game) return;
     
     const nextIndex = gameState.currentQuestionIndex + 1;
     if (nextIndex < gameSet.questions.length) {
-      setGameState(prev => ({
-        ...prev,
-        currentQuestionIndex: nextIndex,
-        strikes: 0 // Reset strikes for new question
-      }));
-      setRevealedAnswerIds([]); // Reset revealed answers for new question
+      try {
+        // Update database with new question index and reset all strikes
+        const success = await updateGameScore(
+          game.id,
+          gameState.team1Score,
+          gameState.team2Score,
+          gameState.team3Score,
+          gameState.team4Score,
+          gameState.team5Score,
+          0, // Reset global strikes
+          nextIndex, // New question index
+          0, // Reset team 1 strikes
+          0, // Reset team 2 strikes
+          0, // Reset team 3 strikes
+          0, // Reset team 4 strikes
+          0  // Reset team 5 strikes
+        );
+
+        if (success) {
+          // Update local state
+          setGameState(prev => ({
+            ...prev,
+            currentQuestionIndex: nextIndex,
+            strikes: 0, // Reset global strikes
+            team1Strikes: 0,
+            team2Strikes: 0,
+            team3Strikes: 0,
+            team4Strikes: 0,
+            team5Strikes: 0
+          }));
+          setRevealedAnswerIds([]); // Reset revealed answers for new question
+        }
+      } catch (error) {
+        console.error('Failed to advance to next question:', error);
+      }
     }
   };
 
@@ -446,6 +497,7 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
       strikes={gameState.strikes}
       gameStatus={gameStatus}
       onRevealAnswer={revealAnswer}
+      onRevealAnswerNoPoints={revealAnswerNoPoints}
       onNextQuestion={nextQuestion}
       onAddStrike={addStrike}
       onStartGame={startGame}

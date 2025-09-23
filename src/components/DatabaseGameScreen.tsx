@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import GameBoard from './GameBoard';
 import { getGameSetByCode, getRevealedAnswers, supabase } from '../lib/supabase';
 import type { GameState, Game, GameSet } from '../lib/supabase';
-import correctAnswerSound from '../assets/correct_answer.mp3';
+import correctAnswerSound from '../assets/reveal.mp3';
 import wrongAnswerSound from '../assets/wrong_answer.mp3';
 
 interface DatabaseGameScreenProps {
