@@ -49,11 +49,11 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [hostGameStatus, setHostGameStatus] = useState<'waiting' | 'playing' | 'paused' | 'finished'>('waiting');
   // Host gating temporarily disabled
-  const { connected, connecting, error: arduinoError, buttonStates, lastPressedIndex, connect, disconnect, serialLog, clearLog } = useArduino({ baudRate: 9600, numButtons: 5 });
+  const { connected, connecting, error: arduinoError, buttonStates, lastPressedIndex, connect, disconnect, serialLog, clearLog, resetBuzzer } = useArduino({ baudRate: 9600, numButtons: 5 });
   const [buzzWinnerIndex, setBuzzWinnerIndex] = useState<number | null>(null);
   const lastButtonSnapshot = useRef<boolean[]>([false, false, false, false, false]);
 
-  // First-buzz lock-in detection
+  // First-buzz lock-in detection with strike gating
   useEffect(() => {
     if (!connected) {
       setBuzzWinnerIndex(null);
@@ -67,17 +67,74 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
     const prev = lastButtonSnapshot.current;
     for (let i = 0; i < buttonStates.length; i++) {
       if (!prev[i] && buttonStates[i]) {
+        // Check if this team is disabled due to 3+ strikes
+        const teamStrikesArray = [
+          teamStrikes.team1,
+          teamStrikes.team2,
+          teamStrikes.team3,
+          teamStrikes.team4,
+          teamStrikes.team5
+        ];
+        
+        if (teamStrikesArray[i] >= 3) {
+          console.log(`Team ${i + 1} attempted to buzz but is disabled (${teamStrikesArray[i]} strikes)`);
+          // Team is disabled, ignore their input
+          continue;
+        }
+        
+        // Team is eligible, set as winner
         setBuzzWinnerIndex(i);
         break;
       }
     }
     lastButtonSnapshot.current = [...buttonStates];
-  }, [buttonStates, connected, buzzWinnerIndex]);
+  }, [buttonStates, connected, buzzWinnerIndex, teamStrikes]);
 
   const resetBuzz = useCallback(() => setBuzzWinnerIndex(null), []);
   const [showStrikeAnimation, setShowStrikeAnimation] = useState(false);
   // Fix timeout type for browser builds
   const animationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto-reset buzzer when any team reaches 3 strikes (but allow steal attempts to complete)
+  useEffect(() => {
+    const teamStrikesArray = [
+      teamStrikes.team1,
+      teamStrikes.team2,
+      teamStrikes.team3,
+      teamStrikes.team4,
+      teamStrikes.team5
+    ];
+    
+    // Check if any team has 3 or more strikes
+    const hasThreeStrikes = teamStrikesArray.some(strikes => strikes >= 3);
+    
+    if (hasThreeStrikes && buzzWinnerIndex !== null) {
+      // Check if the current buzzer winner is the team with 3 strikes
+      const currentWinnerStrikes = teamStrikesArray[buzzWinnerIndex];
+      
+      if (currentWinnerStrikes >= 3) {
+        // The team with 3 strikes is holding the buzzer - reset immediately
+        console.log('Auto-resetting buzzer: eliminated team is holding buzzer');
+        resetBuzz();
+      } else {
+        // A different team (steal attempt) is holding the buzzer - let their celebration complete
+        console.log('Allowing steal attempt to complete celebration');
+        // Reset will happen after their celebration naturally ends
+      }
+    }
+  }, [teamStrikes, buzzWinnerIndex, resetBuzz]);
+
+  // Auto-reset buzzer when question changes
+  const prevQuestionIndexRef = useRef<number>(gameState.currentQuestionIndex);
+  useEffect(() => {
+    if (prevQuestionIndexRef.current !== gameState.currentQuestionIndex) {
+      console.log('Question changed from', prevQuestionIndexRef.current, 'to', gameState.currentQuestionIndex, '- resetting buzzer');
+      resetBuzzer();
+      setBuzzWinnerIndex(null);
+      prevQuestionIndexRef.current = gameState.currentQuestionIndex;
+    }
+  }, [gameState.currentQuestionIndex, resetBuzzer]);
+
   const lastStrikeCountRef = useRef<number>(0);
   const correctAudioRef = useRef<HTMLAudioElement | null>(null);
   const wrongAudioRef = useRef<HTMLAudioElement | null>(null);

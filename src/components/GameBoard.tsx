@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface GameBoardProps {
   currentQuestion: string;
@@ -75,6 +75,129 @@ const GameBoard: React.FC<GameBoardProps> = ({
   // Track which teams have score animations
   const [animatingTeams, setAnimatingTeams] = useState<Set<number>>(new Set());
 
+  // Track celebration animation for buzzer lock-in
+  const [celebratingTeam, setCelebratingTeam] = useState<number | null>(null);
+  const [prevBuzzWinner, setPrevBuzzWinner] = useState<number | null>(null);
+  const celebrationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup celebration timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (celebrationTimeoutRef.current) {
+        clearTimeout(celebrationTimeoutRef.current);
+        celebrationTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  // Clear celebration when buzzer is reset (prevents stuck animations)
+  useEffect(() => {
+    if (buzzWinnerIndex === null && celebratingTeam !== null) {
+      // Buzzer was reset while celebration was active - force cleanup
+      if (celebrationTimeoutRef.current) {
+        clearTimeout(celebrationTimeoutRef.current);
+        celebrationTimeoutRef.current = null;
+      }
+      setCelebratingTeam(null);
+      console.log('Celebration cleared due to buzzer reset');
+    }
+  }, [buzzWinnerIndex, celebratingTeam]);
+
+  // Clear celebration when question changes
+  const prevQuestionIndexRef = useRef<number | undefined>(currentQuestionIndex);
+  useEffect(() => {
+    if (prevQuestionIndexRef.current !== undefined && 
+        prevQuestionIndexRef.current !== currentQuestionIndex && 
+        celebratingTeam !== null) {
+      console.log('Question changed - clearing celebration animation');
+      if (celebrationTimeoutRef.current) {
+        clearTimeout(celebrationTimeoutRef.current);
+        celebrationTimeoutRef.current = null;
+      }
+      setCelebratingTeam(null);
+    }
+    prevQuestionIndexRef.current = currentQuestionIndex;
+  }, [currentQuestionIndex, celebratingTeam]);
+
+  // Detect buzzer lock-in and trigger celebration with robust validation
+  useEffect(() => {
+    // Guard clause 1: Check if buzzWinnerIndex changed from null to a valid team number
+    if (prevBuzzWinner === null && buzzWinnerIndex !== null && buzzWinnerIndex >= 0 && buzzWinnerIndex <= 4) {
+      
+      // Guard clause 2: Validate that the winning team is not disabled (< 3 strikes)
+      const isWinningTeamDisabled = isTeamDisabled(buzzWinnerIndex);
+      
+      if (isWinningTeamDisabled) {
+        console.warn(`Celebration blocked: Team ${buzzWinnerIndex + 1} is disabled with 3+ strikes`);
+        // Do not trigger celebration for disabled teams
+        setPrevBuzzWinner(buzzWinnerIndex);
+        return;
+      }
+      
+      // Guard clause 3: Ensure no other celebration is currently active
+      if (celebratingTeam !== null) {
+        // Force clear previous celebration to allow new steal attempt
+        console.log('Clearing previous celebration for steal attempt');
+        if (celebrationTimeoutRef.current) {
+          clearTimeout(celebrationTimeoutRef.current);
+          celebrationTimeoutRef.current = null;
+        }
+      }
+      
+      // Clear any existing timeout before setting new one
+      if (celebrationTimeoutRef.current) {
+        clearTimeout(celebrationTimeoutRef.current);
+        celebrationTimeoutRef.current = null;
+      }
+      
+      // Check if this is a steal attempt (any team has 3+ strikes but winner is different)
+      const teamStrikesArray = [team1Strikes, team2Strikes, team3Strikes, team4Strikes, team5Strikes];
+      const hasEliminatedTeam = teamStrikesArray.some(strikes => strikes >= 3);
+      const isStealAttempt = hasEliminatedTeam && teamStrikesArray[buzzWinnerIndex] < 3;
+      
+      if (isStealAttempt) {
+        console.log(`Steal attempt detected: Team ${buzzWinnerIndex + 1} stealing opportunity`);
+      }
+      
+      // All guards passed - trigger celebration (same duration for regular and steal attempts)
+      setCelebratingTeam(buzzWinnerIndex);
+      
+      // Set cleanup timeout with proper reference tracking (full 3 seconds)
+      celebrationTimeoutRef.current = setTimeout(() => {
+        setCelebratingTeam(null);
+        celebrationTimeoutRef.current = null;
+      }, 3000);
+    }
+    
+    // Update previous state tracking
+    setPrevBuzzWinner(buzzWinnerIndex);
+  }, [buzzWinnerIndex, prevBuzzWinner, celebratingTeam, team1Strikes, team2Strikes, team3Strikes, team4Strikes, team5Strikes]);
+
+  // Emergency cleanup function to force clear celebrations
+  const forceCleanupCelebration = () => {
+    if (celebrationTimeoutRef.current) {
+      clearTimeout(celebrationTimeoutRef.current);
+      celebrationTimeoutRef.current = null;
+    }
+    setCelebratingTeam(null);
+  };
+
+  // Validate celebration state consistency (prevent orphaned celebrations)
+  useEffect(() => {
+    if (celebratingTeam !== null) {
+      // If celebrating team is now disabled, force cleanup
+      if (isTeamDisabled(celebratingTeam)) {
+        console.warn(`Force clearing celebration: Team ${celebratingTeam + 1} became disabled`);
+        forceCleanupCelebration();
+      }
+      // If no buzzer winner but celebration active, cleanup
+      else if (buzzWinnerIndex === null) {
+        console.warn('Force clearing orphaned celebration: no active buzzer winner');
+        forceCleanupCelebration();
+      }
+    }
+  }, [celebratingTeam, buzzWinnerIndex]);
+
   // Check for score changes and trigger animations
   useEffect(() => {
     const currentScores = {
@@ -114,12 +237,43 @@ const GameBoard: React.FC<GameBoardProps> = ({
     }
   };
 
+  // Helper function to get team name by index (0-4)
+  const getTeamName = (teamIndex: number): string => {
+    switch (teamIndex) {
+      case 0: return team1Name || 'Team 1';
+      case 1: return team2Name || 'Team 2';
+      case 2: return team3Name || 'Team 3';
+      case 3: return team4Name || 'Team 4';
+      case 4: return team5Name || 'Team 5';
+      default: return `Team ${teamIndex + 1}`;
+    }
+  };
+
+  // Helper function to check if team is disabled due to 3+ strikes
+  const isTeamDisabled = (teamIndex: number): boolean => {
+    const teamStrikesArray = [team1Strikes, team2Strikes, team3Strikes, team4Strikes, team5Strikes];
+    return teamStrikesArray[teamIndex] >= 3;
+  };
+
   const teamHighlight = (teamIndex: number, base: string) => {
+    // Check if team is disabled first
+    const disabled = isTeamDisabled(teamIndex);
+    if (disabled) {
+      return base + ' opacity-30 grayscale cursor-not-allowed border-gray-500';
+    }
+    
     if (!arduinoConnected) return base;
+    
+    // Check if this team is celebrating (locked in)
+    const isCelebrating = celebratingTeam === teamIndex;
+    
     // If a winner is locked, show only that team highlighted
     if (buzzWinnerIndex !== null && buzzWinnerIndex !== undefined) {
       if (buzzWinnerIndex === teamIndex) {
-        return base + ' ring-4 ring-white animate-pulse shadow-[0_0_18px_rgba(255,255,255,0.8)]';
+        const celebrationStyles = isCelebrating 
+          ? ' ring-8 ring-yellow-300 animate-pulse shadow-[0_0_25px_rgba(255,255,0,0.9)] scale-105 border-yellow-200' 
+          : ' ring-4 ring-white animate-pulse shadow-[0_0_18px_rgba(255,255,255,0.8)]';
+        return base + celebrationStyles;
       }
       return base + ' opacity-70';
     }
@@ -138,7 +292,17 @@ const GameBoard: React.FC<GameBoardProps> = ({
   // Helper function to get team box classes with animation
   const getTeamBoxClasses = (teamNumber: number, baseClasses: string) => {
     const isAnimating = animatingTeams.has(teamNumber);
-    return `${baseClasses} ${isAnimating ? 'animate-bounce shadow-yellow-400/50 shadow-2xl scale-110 border-yellow-300' : ''}`;
+    const isCelebrating = celebratingTeam === (teamNumber - 1); // Convert 1-5 to 0-4 for comparison
+    
+    let classes = baseClasses;
+    
+    if (isCelebrating) {
+      classes += ' animate-pulse scale-110 ring-8 ring-yellow-300 shadow-yellow-400/80 shadow-2xl border-yellow-200';
+    } else if (isAnimating) {
+      classes += ' animate-bounce shadow-yellow-400/50 shadow-2xl scale-110 border-yellow-300';
+    }
+    
+    return classes;
   };
 
   return (
@@ -373,6 +537,40 @@ const GameBoard: React.FC<GameBoardProps> = ({
           <div className="relative z-10 text-white text-[25rem] font-black drop-shadow-2xl animate-bounce transform scale-110">
             ✕
           </div>
+        </div>
+      )}
+
+      {/* Celebration Animation Overlay for Buzzer Lock-in */}
+      {celebratingTeam !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          {/* Burst effect background */}
+          <div className="absolute inset-0 bg-gradient-radial from-yellow-400/30 via-yellow-300/20 to-transparent animate-ping"></div>
+          <div className="absolute inset-0 bg-gradient-radial from-orange-400/20 via-orange-300/10 to-transparent animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+          
+          {/* Central celebration message */}
+          <div className="relative z-10 text-center">
+            <div className="text-yellow-300 text-8xl font-black drop-shadow-2xl animate-bounce mb-4">
+              🎉
+            </div>
+            <div className="text-white text-6xl font-black drop-shadow-2xl animate-pulse">
+              {getTeamName(celebratingTeam).toUpperCase()} LOCKED IN!
+            </div>
+            <div className="text-yellow-400 text-4xl font-bold drop-shadow-lg animate-bounce mt-4" style={{ animationDelay: '0.3s' }}>
+              🔥 GET READY! 🔥
+            </div>
+          </div>
+          
+          {/* Sparkle effects around the edges */}
+          <div className="absolute top-10 left-10 text-yellow-300 text-6xl animate-ping">✨</div>
+          <div className="absolute top-20 right-20 text-yellow-300 text-5xl animate-pulse" style={{ animationDelay: '0.2s' }}>⭐</div>
+          <div className="absolute bottom-20 left-20 text-yellow-300 text-5xl animate-bounce" style={{ animationDelay: '0.4s' }}>🌟</div>
+          <div className="absolute bottom-10 right-10 text-yellow-300 text-6xl animate-ping" style={{ animationDelay: '0.6s' }}>✨</div>
+          
+          {/* Corner burst effects */}
+          <div className="absolute top-0 left-0 w-64 h-64 bg-gradient-radial from-yellow-400/40 to-transparent animate-spin" style={{ animationDuration: '2s' }}></div>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-radial from-orange-400/40 to-transparent animate-spin" style={{ animationDuration: '3s', animationDirection: 'reverse' }}></div>
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-radial from-red-400/40 to-transparent animate-spin" style={{ animationDuration: '2.5s' }}></div>
+          <div className="absolute bottom-0 right-0 w-64 h-64 bg-gradient-radial from-blue-400/40 to-transparent animate-spin" style={{ animationDuration: '2s', animationDirection: 'reverse' }}></div>
         </div>
       )}
     </div>

@@ -146,11 +146,20 @@ export function useArduino(options: UseArduinoOptions = {}) {
     setState(prev => ({ ...prev, serialLog: [] }));
   }, []);
 
+  const resetBuzzer = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      buttonStates: Array(numButtons).fill(false),
+      lastPressedIndex: null
+    }));
+  }, [numButtons]);
+
   return {
     ...state,
     connect,
     disconnect,
-    clearLog
+    clearLog,
+    resetBuzzer
   };
 }
 
