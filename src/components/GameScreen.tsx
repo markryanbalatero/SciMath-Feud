@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import GameBoard from './GameBoard';
 import { getQuestions } from '../lib/supabase';
 import type { Question, GameState } from '../lib/supabase';
+import { useArduino } from '../hooks/useArduino';
+import buzzerSound from '../assets/family-feud-answer-buzzer.mp3';
 
 interface Answer {
   text: string;
@@ -36,6 +38,143 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [customGame, setCustomGame] = useState<GameData | null>(gameData || null);
+  
+  // Add per-team strike tracking for GameScreen
+  const [teamStrikes] = useState({
+    team1: 0,
+    team2: 0,
+    team3: 0,
+    team4: 0,
+    team5: 0,
+  });
+  
+  const { connected, connecting, error: arduinoError, buttonStates, lastPressedIndex, connect, disconnect, resetBuzzer } = useArduino({ baudRate: 9600, numButtons: 5 });
+  const [buzzWinnerIndex, setBuzzWinnerIndex] = useState<number | null>(null);
+  const lastButtonSnapshot = useRef<boolean[]>([false, false, false, false, false]);
+  
+  // Audio ref for buzzer sound effect
+  const buzzerSoundRef = useRef<HTMLAudioElement>(null);
+
+  // Play buzzer sound for button presses
+  const playBuzzerSound = useCallback(() => {
+    if (buzzerSoundRef.current) {
+      buzzerSoundRef.current.currentTime = 0; // Reset to start
+      buzzerSoundRef.current.volume = 0.7; // Set volume
+      buzzerSoundRef.current.play().catch(error => {
+        console.log('Buzzer sound playback failed:', error);
+      });
+    }
+  }, []);
+
+  // Detect first transition from not pressed -> pressed across any button with strike gating
+  useEffect(() => {
+    if (!connected) {
+      setBuzzWinnerIndex(null);
+      lastButtonSnapshot.current = [false, false, false, false, false];
+      return;
+    }
+    if (buzzWinnerIndex !== null) {
+      // locked; ignore further presses until reset
+      lastButtonSnapshot.current = [...buttonStates];
+      return;
+    }
+    const prev = lastButtonSnapshot.current;
+    for (let i = 0; i < buttonStates.length; i++) {
+      if (!prev[i] && buttonStates[i]) {
+        // Play buzzer sound immediately when any button is pressed
+        playBuzzerSound();
+        
+        // Check if this team is disabled due to 3+ strikes
+        const teamStrikesArray = [
+          teamStrikes.team1,
+          teamStrikes.team2,
+          teamStrikes.team3,
+          teamStrikes.team4,
+          teamStrikes.team5
+        ];
+        
+        if (teamStrikesArray[i] >= 3) {
+          console.log(`Team ${i + 1} attempted to buzz but is disabled (${teamStrikesArray[i]} strikes)`);
+          // Team is disabled, ignore their input
+          continue;
+        }
+        
+        // Team is eligible, set as winner
+        setBuzzWinnerIndex(i);
+        break;
+      }
+    }
+    lastButtonSnapshot.current = [...buttonStates];
+  }, [buttonStates, connected, buzzWinnerIndex, teamStrikes, playBuzzerSound]);
+
+  // Simple beep on lock-in (browser tone)
+  const playBeep = useCallback(() => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.value = 1200;
+      o.connect(g);
+      g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.0001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.15);
+      o.start();
+      o.stop(ctx.currentTime + 0.16);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (buzzWinnerIndex !== null) {
+      playBeep();
+    }
+  }, [buzzWinnerIndex, playBeep]);
+
+  const resetBuzz = () => setBuzzWinnerIndex(null);
+
+  // Auto-reset buzzer when strikes reach 3 (but allow steal attempts to complete)
+  useEffect(() => {
+    const teamStrikesArray = [
+      teamStrikes.team1,
+      teamStrikes.team2,
+      teamStrikes.team3,
+      teamStrikes.team4,
+      teamStrikes.team5
+    ];
+    
+    if (buzzWinnerIndex !== null) {
+      // Check if the current buzzer winner has 3+ strikes
+      const currentWinnerStrikes = teamStrikesArray[buzzWinnerIndex];
+      
+      if (currentWinnerStrikes >= 3) {
+        // The eliminated team is holding the buzzer - reset immediately
+        console.log('Auto-resetting buzzer: eliminated team is holding buzzer');
+        resetBuzz();
+      }
+      // If a different team is holding the buzzer, let their celebration complete
+    }
+    
+    // Also handle general strikes for backward compatibility
+    if (gameState.strikes >= 3 && buzzWinnerIndex !== null) {
+      const currentWinnerStrikes = teamStrikesArray[buzzWinnerIndex];
+      if (currentWinnerStrikes >= 3) {
+        console.log('Auto-resetting buzzer: 3 strikes reached');
+        resetBuzz();
+      }
+    }
+  }, [gameState.strikes, buzzWinnerIndex, teamStrikes]);
+
+  // Auto-reset buzzer when question changes
+  const prevQuestionIndexRef = useRef<number>(gameState.currentQuestionIndex);
+  useEffect(() => {
+    if (prevQuestionIndexRef.current !== gameState.currentQuestionIndex) {
+      console.log('Question changed from', prevQuestionIndexRef.current, 'to', gameState.currentQuestionIndex, '- resetting buzzer');
+      resetBuzzer();
+      setBuzzWinnerIndex(null);
+      prevQuestionIndexRef.current = gameState.currentQuestionIndex;
+    }
+  }, [gameState.currentQuestionIndex, resetBuzzer]);
 
   useEffect(() => {
     if (gameData) {
@@ -85,6 +224,9 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
     }
   };
 
+  // handleGameEnd removed (unused in current simplified flow)
+
+  // (Optional) future helpers for strikes, scores, etc. removed due to unused.
 
   if (loading) {
     return (
@@ -161,26 +303,67 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
     );
   }
 
-  // Ensure answers always have revealed: boolean
-  const safeAnswers = questionData.answers.map(a => ({
-    ...a,
-    revealed: a.revealed === true ? true : false
-  }));
 
   return (
     <div className="game-screen">
+      {/* Audio element for buzzer sound effect */}
+      <audio ref={buzzerSoundRef} preload="auto">
+        <source src={buzzerSound} type="audio/mpeg" />
+      </audio>
+      
+      {/* Overlay controls for Arduino connection */}
+      <div className="fixed top-2 left-2 z-50 flex flex-col gap-2">
+        <button
+          onClick={() => connected ? disconnect() : connect()}
+          className={`px-4 py-2 rounded-md text-sm font-semibold shadow-md transition-colors ${connected ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}
+          disabled={connecting}
+        >
+          {connecting ? 'Connecting...' : connected ? 'Disconnect Buzzers' : 'Connect Buzzers'}
+        </button>
+        {connected && (
+          <button
+            onClick={resetBuzz}
+            className="px-3 py-1 rounded-md text-xs font-semibold shadow bg-yellow-600 hover:bg-yellow-700 text-white"
+          >
+            Reset Buzz
+          </button>
+        )}
+        {arduinoError && (
+          <div className="text-xs text-red-300 max-w-[160px]">{arduinoError}</div>
+        )}
+        {connected && (
+          <div className="flex gap-1">
+            {buttonStates.map((b, i) => (
+              <div key={i} className={`w-4 h-4 rounded-full ${b ? 'bg-yellow-300 animate-pulse' : 'bg-gray-600'}`}></div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <GameBoard
         currentQuestion={questionData.question}
-        answers={safeAnswers}
+        answers={questionData.answers.map(a => ({
+          text: (a as any).text,
+            points: (a as any).points,
+            revealed: (a as any).revealed ?? false
+        }))}
         team1Score={gameState.team1Score}
         team2Score={gameState.team2Score}
         team3Score={gameState.team3Score}
         team4Score={gameState.team4Score}
         team5Score={gameState.team5Score}
+        team1Strikes={teamStrikes.team1}
+        team2Strikes={teamStrikes.team2}
+        team3Strikes={teamStrikes.team3}
+        team4Strikes={teamStrikes.team4}
+        team5Strikes={teamStrikes.team5}
         strikes={gameState.strikes}
         currentQuestionIndex={gameState.currentQuestionIndex + 1}
-        totalQuestions={customGame ? 1 : questions.length}
         onRevealAnswer={revealAnswer}
+        arduinoConnected={connected}
+        buttonStates={buttonStates}
+        lastPressedIndex={lastPressedIndex}
+        buzzWinnerIndex={buzzWinnerIndex}
       />
     </div>
   );

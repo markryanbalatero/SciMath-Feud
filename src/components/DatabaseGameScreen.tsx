@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import GameBoard from './GameBoard';
 import { getGameSetByCode, getRevealedAnswers, supabase } from '../lib/supabase';
 import type { GameState, Game, GameSet } from '../lib/supabase';
+import { useArduino } from '../hooks/useArduino';
 import correctAnswerSound from '../assets/reveal.mp3';
 import wrongAnswerSound from '../assets/wrong_answer.mp3';
 
@@ -47,8 +48,93 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hostGameStatus, setHostGameStatus] = useState<'waiting' | 'playing' | 'paused' | 'finished'>('waiting');
+  // Host gating temporarily disabled
+  const { connected, connecting, error: arduinoError, buttonStates, lastPressedIndex, connect, disconnect, serialLog, clearLog, resetBuzzer } = useArduino({ baudRate: 9600, numButtons: 5 });
+  const [buzzWinnerIndex, setBuzzWinnerIndex] = useState<number | null>(null);
+  const lastButtonSnapshot = useRef<boolean[]>([false, false, false, false, false]);
+
+  // First-buzz lock-in detection with strike gating
+  useEffect(() => {
+    if (!connected) {
+      setBuzzWinnerIndex(null);
+      lastButtonSnapshot.current = [false, false, false, false, false];
+      return;
+    }
+    if (buzzWinnerIndex !== null) {
+      lastButtonSnapshot.current = [...buttonStates];
+      return;
+    }
+    const prev = lastButtonSnapshot.current;
+    for (let i = 0; i < buttonStates.length; i++) {
+      if (!prev[i] && buttonStates[i]) {
+        // Check if this team is disabled due to 3+ strikes
+        const teamStrikesArray = [
+          teamStrikes.team1,
+          teamStrikes.team2,
+          teamStrikes.team3,
+          teamStrikes.team4,
+          teamStrikes.team5
+        ];
+        
+        if (teamStrikesArray[i] >= 3) {
+          console.log(`Team ${i + 1} attempted to buzz but is disabled (${teamStrikesArray[i]} strikes)`);
+          // Team is disabled, ignore their input
+          continue;
+        }
+        
+        // Team is eligible, set as winner
+        setBuzzWinnerIndex(i);
+        break;
+      }
+    }
+    lastButtonSnapshot.current = [...buttonStates];
+  }, [buttonStates, connected, buzzWinnerIndex, teamStrikes]);
+
+  const resetBuzz = useCallback(() => setBuzzWinnerIndex(null), []);
   const [showStrikeAnimation, setShowStrikeAnimation] = useState(false);
-  const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Fix timeout type for browser builds
+  const animationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto-reset buzzer when any team reaches 3 strikes (but allow steal attempts to complete)
+  useEffect(() => {
+    const teamStrikesArray = [
+      teamStrikes.team1,
+      teamStrikes.team2,
+      teamStrikes.team3,
+      teamStrikes.team4,
+      teamStrikes.team5
+    ];
+    
+    // Check if any team has 3 or more strikes
+    const hasThreeStrikes = teamStrikesArray.some(strikes => strikes >= 3);
+    
+    if (hasThreeStrikes && buzzWinnerIndex !== null) {
+      // Check if the current buzzer winner is the team with 3 strikes
+      const currentWinnerStrikes = teamStrikesArray[buzzWinnerIndex];
+      
+      if (currentWinnerStrikes >= 3) {
+        // The team with 3 strikes is holding the buzzer - reset immediately
+        console.log('Auto-resetting buzzer: eliminated team is holding buzzer');
+        resetBuzz();
+      } else {
+        // A different team (steal attempt) is holding the buzzer - let their celebration complete
+        console.log('Allowing steal attempt to complete celebration');
+        // Reset will happen after their celebration naturally ends
+      }
+    }
+  }, [teamStrikes, buzzWinnerIndex, resetBuzz]);
+
+  // Auto-reset buzzer when question changes
+  const prevQuestionIndexRef = useRef<number>(gameState.currentQuestionIndex);
+  useEffect(() => {
+    if (prevQuestionIndexRef.current !== gameState.currentQuestionIndex) {
+      console.log('Question changed from', prevQuestionIndexRef.current, 'to', gameState.currentQuestionIndex, '- resetting buzzer');
+      resetBuzzer();
+      setBuzzWinnerIndex(null);
+      prevQuestionIndexRef.current = gameState.currentQuestionIndex;
+    }
+  }, [gameState.currentQuestionIndex, resetBuzzer]);
+
   const lastStrikeCountRef = useRef<number>(0);
   const correctAudioRef = useRef<HTMLAudioElement | null>(null);
   const wrongAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -214,15 +300,16 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
     };
 
     pollGameData();
-    const interval = setInterval(pollGameData, 2000); // Poll every 2 seconds for real-time updates
+    const interval = setInterval(pollGameData, 2000);
     return () => {
       clearInterval(interval);
-      // Clean up animation timeout if component unmounts
       if (animationTimeoutRef.current) {
         clearTimeout(animationTimeoutRef.current);
+        animationTimeoutRef.current = null;
       }
     };
   }, [game, gameState.gameStarted]);
+  // Host status polling removed (temporary bypass)
 
   const initializeGame = async () => {
     try {
@@ -253,11 +340,10 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
         
         // Check if the game is playing
         if (latestGame.game_status !== 'playing') {
-          setError('Game has not started yet. Please wait for the host to start the game.');
-          setGame(latestGame); // Set the game so polling can work
-          setHostGameStatus(latestGame.game_status);
-          return;
-        }
+           setGame(latestGame); // Set the game so polling can work
+           setHostGameStatus(latestGame.game_status);
+           return;
+         }
         
         // Game is playing, join it
         setGame(latestGame);
@@ -275,14 +361,13 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
   const revealAnswer = async (answerIndex: number) => {
     if (!gameSet?.questions || !game) return;
 
-    const currentQuestion = gameSet.questions[gameState.currentQuestionIndex];
+    const safeIndex = Math.min(Math.max(gameState.currentQuestionIndex, 0), gameSet.questions.length - 1);
+    const currentQuestion = gameSet.questions[safeIndex];
     if (!currentQuestion || answerIndex >= currentQuestion.answers.length) return;
 
     const answer = currentQuestion.answers[answerIndex];
     if (revealedAnswerIds.includes(answer.id)) return;
 
-    // Player screen should not update scores - only the host can do that
-    // This function is only for revealing answers, not scoring
     console.log('Player screen cannot award points - only host can score');
   };
 
@@ -433,6 +518,7 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
       </div>
     );
   }
+  // Waiting/paused screens disabled (temporary bypass)
 
   if (!gameSet?.questions || gameSet.questions.length === 0) {
     return (
@@ -450,7 +536,9 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
     );
   }
 
-  const currentQuestion = gameSet.questions[gameState.currentQuestionIndex];
+  // Clamp index to avoid out-of-bounds
+  const safeQuestionIndex = Math.min(Math.max(gameState.currentQuestionIndex, 0), gameSet.questions.length - 1);
+  const currentQuestion = gameSet.questions[safeQuestionIndex];
   const answersWithRevealState = currentQuestion.answers.map(answer => ({
     ...answer,
     revealed: revealedAnswerIds.includes(answer.id)
@@ -458,6 +546,39 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
 
   return (
     <div className="relative">
+      {/* Arduino Controls - top-left */}
+      <div className="fixed top-2 left-2 z-50 flex flex-col gap-2">
+        <button
+          onClick={() => connected ? disconnect() : connect()}
+          className={`px-4 py-2 rounded-md text-sm font-semibold shadow-md transition-colors ${connected ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}
+          disabled={connecting}
+        >
+          {connecting ? 'Connecting...' : connected ? 'Disconnect Buzzers' : 'Connect Buzzers'}
+        </button>
+        {connected && (
+          <div className="flex gap-2">
+            <button onClick={resetBuzz} className="px-3 py-1 rounded-md text-xs font-semibold shadow bg-yellow-600 hover:bg-yellow-700 text-white">Reset Buzz</button>
+            <button onClick={clearLog} className="px-3 py-1 rounded-md text-xs font-semibold shadow bg-gray-600 hover:bg-gray-700 text-white">Clear Log</button>
+          </div>
+        )}
+        {arduinoError && <div className="text-xs text-red-300 max-w-[200px]">{arduinoError}</div>}
+        {connected && (
+          <div className="flex items-center gap-1">
+            {buttonStates.map((b, i) => (
+              <div key={i} className={`w-4 h-4 rounded-full ${b ? 'bg-yellow-300 animate-pulse' : 'bg-gray-600'}`} title={`B${i+1}`}></div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Serial Log - bottom-left */}
+      <div className="fixed bottom-2 left-2 z-50 w-72 max-h-48 overflow-auto bg-black/60 text-green-200 text-xs p-2 rounded-md border border-white/10">
+        <div className="font-semibold text-white/80 mb-1">Serial Log</div>
+        {serialLog.length === 0 && <div className="text-white/50">(no data)</div>}
+        {serialLog.slice(-50).map((entry, idx) => (
+          <div key={idx} className="whitespace-pre">{new Date(entry.t).toLocaleTimeString()} - {entry.line}</div>
+        ))}
+      </div>
       <GameBoard
         currentQuestion={currentQuestion.question}
         answers={answersWithRevealState}
@@ -477,9 +598,12 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
         team4Strikes={teamStrikes.team4}
         team5Strikes={teamStrikes.team5}
         strikes={gameState.strikes}
-        currentQuestionIndex={gameState.currentQuestionIndex}
-        totalQuestions={gameSet.questions.length}
+        currentQuestionIndex={safeQuestionIndex}
         onRevealAnswer={revealAnswer}
+        arduinoConnected={connected}
+        buttonStates={buttonStates}
+        lastPressedIndex={lastPressedIndex}
+        buzzWinnerIndex={buzzWinnerIndex}
         showStrikeAnimation={showStrikeAnimation}
       />
     </div>
