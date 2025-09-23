@@ -3,7 +3,6 @@ import GameBoard from './GameBoard';
 import { getQuestions } from '../lib/supabase';
 import type { Question, GameState } from '../lib/supabase';
 import { useArduino } from '../hooks/useArduino';
-import buzzerSound from '../assets/family-feud-answer-buzzer.mp3';
 
 interface Answer {
   text: string;
@@ -40,7 +39,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
   const [customGame, setCustomGame] = useState<GameData | null>(gameData || null);
   
   // Add per-team strike tracking for GameScreen
-  const [teamStrikes] = useState({
+  const [teamStrikes, setTeamStrikes] = useState({
     team1: 0,
     team2: 0,
     team3: 0,
@@ -51,20 +50,6 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
   const { connected, connecting, error: arduinoError, buttonStates, lastPressedIndex, connect, disconnect, resetBuzzer } = useArduino({ baudRate: 9600, numButtons: 5 });
   const [buzzWinnerIndex, setBuzzWinnerIndex] = useState<number | null>(null);
   const lastButtonSnapshot = useRef<boolean[]>([false, false, false, false, false]);
-  
-  // Audio ref for buzzer sound effect
-  const buzzerSoundRef = useRef<HTMLAudioElement>(null);
-
-  // Play buzzer sound for button presses
-  const playBuzzerSound = useCallback(() => {
-    if (buzzerSoundRef.current) {
-      buzzerSoundRef.current.currentTime = 0; // Reset to start
-      buzzerSoundRef.current.volume = 0.7; // Set volume
-      buzzerSoundRef.current.play().catch(error => {
-        console.log('Buzzer sound playback failed:', error);
-      });
-    }
-  }, []);
 
   // Detect first transition from not pressed -> pressed across any button with strike gating
   useEffect(() => {
@@ -81,9 +66,6 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
     const prev = lastButtonSnapshot.current;
     for (let i = 0; i < buttonStates.length; i++) {
       if (!prev[i] && buttonStates[i]) {
-        // Play buzzer sound immediately when any button is pressed
-        playBuzzerSound();
-        
         // Check if this team is disabled due to 3+ strikes
         const teamStrikesArray = [
           teamStrikes.team1,
@@ -105,7 +87,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
       }
     }
     lastButtonSnapshot.current = [...buttonStates];
-  }, [buttonStates, connected, buzzWinnerIndex, teamStrikes, playBuzzerSound]);
+  }, [buttonStates, connected, buzzWinnerIndex, teamStrikes]);
 
   // Simple beep on lock-in (browser tone)
   const playBeep = useCallback(() => {
@@ -306,11 +288,6 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
 
   return (
     <div className="game-screen">
-      {/* Audio element for buzzer sound effect */}
-      <audio ref={buzzerSoundRef} preload="auto">
-        <source src={buzzerSound} type="audio/mpeg" />
-      </audio>
-      
       {/* Overlay controls for Arduino connection */}
       <div className="fixed top-2 left-2 z-50 flex flex-col gap-2">
         <button
@@ -359,6 +336,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
         team5Strikes={teamStrikes.team5}
         strikes={gameState.strikes}
         currentQuestionIndex={gameState.currentQuestionIndex + 1}
+        totalQuestions={customGame ? 1 : questions.length}
         onRevealAnswer={revealAnswer}
         arduinoConnected={connected}
         buttonStates={buttonStates}
