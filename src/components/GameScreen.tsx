@@ -40,7 +40,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
   const [customGame, setCustomGame] = useState<GameData | null>(gameData || null);
   
   // Add per-team strike tracking for GameScreen
-  const [teamStrikes, setTeamStrikes] = useState({
+  const [teamStrikes] = useState({
     team1: 0,
     team2: 0,
     team3: 0,
@@ -359,7 +359,6 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
         team5Strikes={teamStrikes.team5}
         strikes={gameState.strikes}
         currentQuestionIndex={gameState.currentQuestionIndex + 1}
-        totalQuestions={customGame ? 1 : questions.length}
         onRevealAnswer={revealAnswer}
         arduinoConnected={connected}
         buttonStates={buttonStates}
