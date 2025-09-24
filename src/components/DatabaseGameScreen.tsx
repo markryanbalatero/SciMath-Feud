@@ -599,7 +599,6 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
         team5Strikes={teamStrikes.team5}
         strikes={gameState.strikes}
         currentQuestionIndex={safeQuestionIndex}
-        totalQuestions={gameSet.questions.length}
         onRevealAnswer={revealAnswer}
         arduinoConnected={connected}
         buttonStates={buttonStates}

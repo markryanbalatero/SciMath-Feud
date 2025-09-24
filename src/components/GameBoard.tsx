@@ -24,7 +24,6 @@ interface GameBoardProps {
   team5Strikes?: number;
   strikes: number;
   currentQuestionIndex?: number;
-  totalQuestions?: number;
   onRevealAnswer: (index: number) => void;
   // Arduino integration
   arduinoConnected?: boolean;
@@ -55,7 +54,6 @@ const GameBoard: React.FC<GameBoardProps> = ({
   strikes,
   // optional, currently unused visually:
   currentQuestionIndex,
-  // totalQuestions, // unused
   onRevealAnswer,
   arduinoConnected = false,
   buttonStates = [false, false, false, false, false],
