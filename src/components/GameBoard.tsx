@@ -337,9 +337,9 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
         {/* Main area */}
         <div className="flex-1 flex flex-col items-center justify-center min-h-0 max-h-full p-2 sm:p-4">
-          {/* Top row: Teams 1&2 left, 4&5 right */}
+          {/* Top row: Teams 1&3 left, 2&4 right */}
           <div className="w-full max-w-7xl flex justify-between items-center mb-4 sm:mb-6">
-            {/* Left: Team 1 & 2 */}
+            {/* Left: Team 1 & 3 */}
             <div className="flex flex-col gap-3 sm:gap-4">
               {/* Team 1 */}
               <div className={teamHighlight(0, "bg-gradient-to-br from-red-700 to-red-800 border-2 sm:border-3 lg:border-4 border-yellow-400 rounded-xl lg:rounded-2xl w-20 sm:w-28 lg:w-36 xl:w-40 h-24 sm:h-32 lg:h-40 xl:h-44 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden transition-all duration-200")}>
@@ -359,19 +359,19 @@ const GameBoard: React.FC<GameBoardProps> = ({
                 </div>
               </div>
 
-              {/* Team 2 */}
-              <div className={teamHighlight(1, "bg-gradient-to-br from-blue-700 to-blue-800 border-2 sm:border-3 lg:border-4 border-yellow-400 rounded-xl lg:rounded-2xl w-20 sm:w-28 lg:w-36 xl:w-40 h-24 sm:h-32 lg:h-40 xl:h-44 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden transition-all duration-200")}>
-                <div className={getTeamBoxClasses(2, "absolute inset-0 rounded-xl lg:rounded-2xl")}></div>
+              {/* Team 3 */}
+              <div className={teamHighlight(2, "bg-gradient-to-br from-green-700 to-green-800 border-2 sm:border-3 lg:border-4 border-yellow-400 rounded-xl lg:rounded-2xl w-20 sm:w-28 lg:w-36 xl:w-40 h-24 sm:h-32 lg:h-40 xl:h-44 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden transition-all duration-200")}>
+                <div className={getTeamBoxClasses(3, "absolute inset-0 rounded-xl lg:rounded-2xl")}></div>
                 <div className="absolute inset-1 sm:inset-2 border-2 border-dotted border-yellow-300 rounded-lg lg:rounded-xl"></div>
                 <div className="text-white font-bold text-xs sm:text-sm lg:text-base xl:text-lg drop-shadow-lg z-10 mb-1 text-center px-1">
-                  {team2Name || 'Team 2'}
+                  {team3Name || 'Team 3'}
                 </div>
                 <div className="text-yellow-400 font-black text-lg sm:text-2xl lg:text-3xl xl:text-4xl drop-shadow-2xl z-10 mb-1">
-                  {team2Score}
+                  {team3Score}
                 </div>
                 <div className="text-white font-bold text-xs sm:text-sm drop-shadow-lg z-10 mb-1">POINTS</div>
                 <div className="flex gap-1 z-10">
-                  {Array.from({ length: team2Strikes }, (_, i) => (
+                  {Array.from({ length: team3Strikes }, (_, i) => (
                     <div key={i} className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-sm sm:text-base font-bold animate-pulse">✕</div>
                   ))}
                 </div>
@@ -444,8 +444,26 @@ const GameBoard: React.FC<GameBoardProps> = ({
               </div>
             </div>
 
-            {/* Right: Team 4 & 5 */}
+            {/* Right: Team 2 & 4 */}
             <div className="flex flex-col gap-3 sm:gap-4">
+              {/* Team 2 */}
+              <div className={teamHighlight(1, "bg-gradient-to-br from-blue-700 to-blue-800 border-2 sm:border-3 lg:border-4 border-yellow-400 rounded-xl lg:rounded-2xl w-20 sm:w-28 lg:w-36 xl:w-40 h-24 sm:h-32 lg:h-40 xl:h-44 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden transition-all duration-200")}>
+                <div className={getTeamBoxClasses(2, "absolute inset-0 rounded-xl lg:rounded-2xl")}></div>
+                <div className="absolute inset-1 sm:inset-2 border-2 border-dotted border-yellow-300 rounded-lg lg:rounded-xl"></div>
+                <div className="text-white font-bold text-xs sm:text-sm lg:text-base xl:text-lg drop-shadow-lg z-10 mb-1 text-center px-1">
+                  {team2Name || 'Team 2'}
+                </div>
+                <div className="text-yellow-400 font-black text-lg sm:text-2xl lg:text-3xl xl:text-4xl drop-shadow-2xl z-10 mb-1">
+                  {team2Score}
+                </div>
+                <div className="text-white font-bold text-xs sm:text-sm drop-shadow-lg z-10 mb-1">POINTS</div>
+                <div className="flex gap-1 z-10">
+                  {Array.from({ length: team2Strikes }, (_, i) => (
+                    <div key={i} className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-sm sm:text-base font-bold animate-pulse">✕</div>
+                  ))}
+                </div>
+              </div>
+
               {/* Team 4 */}
               <div className={teamHighlight(3, "bg-gradient-to-br from-purple-700 to-purple-800 border-2 sm:border-3 lg:border-4 border-yellow-400 rounded-xl lg:rounded-2xl w-20 sm:w-28 lg:w-36 xl:w-40 h-24 sm:h-32 lg:h-40 xl:h-44 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden transition-all duration-200")}>
                 <div className={getTeamBoxClasses(4, "absolute inset-0 rounded-xl lg:rounded-2xl")}></div>
@@ -463,41 +481,23 @@ const GameBoard: React.FC<GameBoardProps> = ({
                   ))}
                 </div>
               </div>
-
-              {/* Team 5 */}
-              <div className={teamHighlight(4, "bg-gradient-to-br from-orange-700 to-orange-800 border-2 sm:border-3 lg:border-4 border-yellow-400 rounded-xl lg:rounded-2xl w-20 sm:w-28 lg:w-36 xl:w-40 h-24 sm:h-32 lg:h-40 xl:h-44 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden transition-all duration-200")}>
-                <div className={getTeamBoxClasses(5, "absolute inset-0 rounded-xl lg:rounded-2xl")}></div>
-                <div className="absolute inset-1 sm:inset-2 border-2 border-dotted border-yellow-300 rounded-lg lg:rounded-xl"></div>
-                <div className="text-white font-bold text-xs sm:text-sm lg:text-base xl:text-lg drop-shadow-lg z-10 mb-1 text-center px-1">
-                  {team5Name || 'Team 5'}
-                </div>
-                <div className="text-yellow-400 font-black text-lg sm:text-2xl lg:text-3xl xl:text-4xl drop-shadow-2xl z-10 mb-1">
-                  {team5Score}
-                </div>
-                <div className="text-white font-bold text-xs sm:text-sm drop-shadow-lg z-10 mb-1">POINTS</div>
-                <div className="flex gap-1 z-10">
-                  {Array.from({ length: team5Strikes }, (_, i) => (
-                    <div key={i} className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-sm sm:text-base font-bold animate-pulse">✕</div>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
 
-          {/* Team 3 */}
+          {/* Team 5 at bottom */}
           <div className="flex justify-center mt-4 sm:mt-6">
-            <div className={teamHighlight(2, "bg-gradient-to-br from-green-700 to-green-800 border-2 sm:border-3 lg:border-4 border-yellow-400 rounded-xl lg:rounded-2xl w-24 sm:w-32 lg:w-40 xl:w-44 h-20 sm:h-24 lg:h-28 xl:h-32 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden transition-all duration-200")}>
-              <div className={getTeamBoxClasses(3, "absolute inset-0 rounded-xl lg:rounded-2xl")}></div>
+            <div className={teamHighlight(4, "bg-gradient-to-br from-orange-700 to-orange-800 border-2 sm:border-3 lg:border-4 border-yellow-400 rounded-xl lg:rounded-2xl w-24 sm:w-32 lg:w-40 xl:w-44 h-20 sm:h-24 lg:h-28 xl:h-32 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden transition-all duration-200")}>
+              <div className={getTeamBoxClasses(5, "absolute inset-0 rounded-xl lg:rounded-2xl")}></div>
               <div className="absolute inset-1 sm:inset-2 border-2 border-dotted border-yellow-300 rounded-lg lg:rounded-xl"></div>
               <div className="text-white font-bold text-xs sm:text-sm lg:text-base xl:text-lg drop-shadow-lg z-10 mb-1 text-center px-1">
-                {team3Name || 'Team 3'}
+                {team5Name || 'Team 5'}
               </div>
               <div className="text-yellow-400 font-black text-lg sm:text-2xl lg:text-3xl xl:text-4xl drop-shadow-2xl z-10 mb-1">
-                {team3Score}
+                {team5Score}
               </div>
               <div className="text-white font-bold text-xs sm:text-sm drop-shadow-lg z-10 mb-1">POINTS</div>
               <div className="flex gap-1 z-10">
-                {Array.from({ length: team3Strikes }, (_, i) => (
+                {Array.from({ length: team5Strikes }, (_, i) => (
                   <div key={i} className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-sm sm:text-base font-bold animate-pulse">✕</div>
                 ))}
               </div>
