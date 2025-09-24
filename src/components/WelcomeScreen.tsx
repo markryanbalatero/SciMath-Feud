@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import welcomeImage from '../assets/1758200122303.jpg';
+import themeSong from '../assets/Family Feud Theme Song (Harvey era).mp3';
 
 interface WelcomeScreenProps {
   onStartGame: () => void;
@@ -9,8 +10,37 @@ interface WelcomeScreenProps {
 }
 
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStartGame, onSettings, onAdmin, onHostControl }) => {
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    // Start playing background music when component mounts
+    if (audioRef.current) {
+      audioRef.current.volume = 0.3; // Set volume to 30%
+      audioRef.current.loop = true; // Loop the music
+      audioRef.current.play().catch(error => {
+        console.log('Audio autoplay prevented:', error);
+        // Handle autoplay restrictions by modern browsers
+      });
+    }
+
+    // Cleanup function to stop music when component unmounts
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+    };
+  }, []);
+
   return (
     <div className="w-screen h-screen fixed inset-0 overflow-hidden flex items-center justify-center relative">
+      {/* Background Music */}
+      <audio
+        ref={audioRef}
+        src={themeSong}
+        preload="auto"
+      />
+      
       {/* Background Image */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat flex items-center justify-center"
