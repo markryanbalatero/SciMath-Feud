@@ -55,7 +55,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
   strikes,
   // optional, currently unused visually:
   currentQuestionIndex,
-  totalQuestions,
+  // totalQuestions, // unused
   onRevealAnswer,
   arduinoConnected = false,
   buttonStates = [false, false, false, false, false],
