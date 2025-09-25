@@ -515,7 +515,6 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
       team3Strikes={game?.team3_strikes || 0}
       team4Strikes={game?.team4_strikes || 0}
       team5Strikes={game?.team5_strikes || 0}
-      strikes={gameState.strikes}
       gameStatus={gameStatus}
       onRevealAnswer={revealAnswer}
       onRevealAnswerNoPoints={revealAnswerNoPoints}
