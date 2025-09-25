@@ -33,7 +33,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStartGame, onSettings, 
   }, []);
 
   return (
-    <div className="w-screen h-screen fixed inset-0 overflow-hidden flex items-center justify-center relative">
+    <div className="w-screen h-screen fixed inset-0 overflow-hidden select-none">
       {/* Background Music */}
       <audio
         ref={audioRef}
@@ -41,19 +41,21 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStartGame, onSettings, 
         preload="auto"
       />
       
-      {/* Background Image */}
+      {/* Background Image - Static and Centered */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat flex items-center justify-center"
+        className="absolute inset-0 bg-fixed bg-center bg-cover bg-no-repeat"
         style={{ 
           backgroundImage: `url(${welcomeImage})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center center',
-          backgroundRepeat: 'no-repeat'
+          backgroundRepeat: 'no-repeat',
+          backgroundAttachment: 'fixed'
         }}
       >
         {/* Dark overlay to ensure text readability */}
-        <div className="absolute inset-0 bg-black/40"></div>
+        <div className="absolute inset-0 bg-black/40 pointer-events-none"></div>
       </div>
+
       {/* Main Content */}
       <div className="relative z-10 w-full h-full flex flex-col justify-end items-center px-8 pb-12">
         

@@ -1,27 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { getGameSetByCode } from '../lib/supabase';
 import type { GameSet } from '../lib/supabase';
 import DatabaseGameScreen from './DatabaseGameScreen';
 import { supabase } from '../lib/supabase';
+import { useArduino } from '../hooks/useArduino';
+import buzzerSound from '../assets/family-feud-answer-buzzer.mp3';
 
 interface GameSetupProps {
   onBackToWelcome: () => void;
 }
 
 const GameSetup: React.FC<GameSetupProps> = ({ onBackToWelcome }) => {
-  // Polling for game status
+  // Arduino buzzer integration
+  const { connected, connecting, error: arduinoError, buttonStates, connect, disconnect } = useArduino({ baudRate: 9600, numButtons: 5 });
+  const buzzerAudioRef = useRef<HTMLAudioElement>(null);
+  const lastButtonSnapshot = useRef<boolean[]>([false, false, false, false, false]);
+
+  // Existing state
   const [polling, setPolling] = useState(false);
   const [game, setGame] = useState<any | null>(null);
   const [gameCode, setGameCode] = useState('');
-  // Team names will be fetched from gameSet
   const [gameSet, setGameSet] = useState<GameSet | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [gameStarted, setGameStarted] = useState(false);
-  // Remove gameStatus, only validate code
+
+  // Play buzzer sound function
+  const playBuzzerSound = useCallback(() => {
+    if (buzzerAudioRef.current) {
+      buzzerAudioRef.current.currentTime = 0;
+      buzzerAudioRef.current.play().catch(error => {
+        console.log('Buzzer sound play failed:', error);
+      });
+    }
+  }, []);
+
+  // Detect button presses and play buzzer sound
+  useEffect(() => {
+    if (!connected) {
+      lastButtonSnapshot.current = [false, false, false, false, false];
+      return;
+    }
+
+    const prev = lastButtonSnapshot.current;
+    for (let i = 0; i < buttonStates.length; i++) {
+      if (!prev[i] && buttonStates[i]) {
+        // Button pressed - play buzzer sound
+        playBuzzerSound();
+        console.log(`Team ${i + 1} pressed their buzzer!`);
+        break;
+      }
+    }
+    lastButtonSnapshot.current = [...buttonStates];
+  }, [buttonStates, connected, playBuzzerSound]);
 
   const validateGameCode = async () => {
-    
     if (!gameCode.trim()) {
       setError('Please enter a game code');
       return;
@@ -73,8 +106,10 @@ const GameSetup: React.FC<GameSetupProps> = ({ onBackToWelcome }) => {
       setPolling(false);
     };
     fetchGame();
+  };
+
   // Poll for game status if waiting
-  React.useEffect(() => {
+  useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (polling && gameSet) {
       interval = setInterval(async () => {
@@ -96,7 +131,6 @@ const GameSetup: React.FC<GameSetupProps> = ({ onBackToWelcome }) => {
       if (interval) clearInterval(interval);
     };
   }, [polling, gameSet]);
-  };
 
   if (gameStarted) {
     return (
@@ -114,6 +148,51 @@ const GameSetup: React.FC<GameSetupProps> = ({ onBackToWelcome }) => {
 
   return (
     <div className="w-screen h-screen fixed inset-0 overflow-hidden bg-gradient-to-b from-blue-800 via-blue-900 to-blue-950 flex items-center justify-center">
+      {/* Buzzer Audio */}
+      <audio
+        ref={buzzerAudioRef}
+        src={buzzerSound}
+        preload="auto"
+      />
+
+      {/* Arduino Buzzer Controls */}
+      <div className="fixed top-4 left-4 z-50 flex flex-col gap-2">
+        <button
+          onClick={() => connected ? disconnect() : connect()}
+          className={`px-4 py-2 rounded-md text-sm font-semibold shadow-md transition-colors ${
+            connected ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'
+          } text-white`}
+          disabled={connecting}
+        >
+          {connecting ? 'Connecting...' : connected ? 'Disconnect Buzzers' : 'Connect Buzzers'}
+        </button>
+        
+        {arduinoError && (
+          <div className="text-xs text-red-300 max-w-[160px] bg-red-900/50 p-2 rounded">
+            {arduinoError}
+          </div>
+        )}
+        
+        {connected && (
+          <div className="bg-black/50 p-2 rounded">
+            <div className="text-xs text-white mb-1">Buzzer Status:</div>
+            <div className="flex gap-1">
+              {buttonStates.map((pressed, i) => (
+                <div
+                  key={i}
+                  className={`w-4 h-4 rounded-full border ${
+                    pressed 
+                      ? 'bg-yellow-300 border-yellow-500 animate-pulse' 
+                      : 'bg-gray-600 border-gray-500'
+                  }`}
+                  title={`Team ${i + 1}`}
+                ></div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-30">
         <div className="absolute inset-0 bg-gradient-radial from-blue-600/20 to-transparent"></div>
@@ -131,6 +210,18 @@ const GameSetup: React.FC<GameSetupProps> = ({ onBackToWelcome }) => {
           <h1 className="text-4xl font-black text-center mb-8 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Game Setup
           </h1>
+
+          {/* Arduino Status Indicator */}
+          {connected && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-green-800 font-semibold">
+                  Buzzers Connected - Ready to Play!
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Game Code Input */}
           <div className="mb-6">
@@ -169,12 +260,22 @@ const GameSetup: React.FC<GameSetupProps> = ({ onBackToWelcome }) => {
             </div>
           )}
 
-          {/* Team Names: Removed for player, fetched from gameSet */}
-
           {/* Error Message */}
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
               <p className="text-red-700 font-medium">{error}</p>
+            </div>
+          )}
+
+          {/* Polling Status */}
+          {polling && (
+            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+              <div className="flex items-center space-x-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600"></div>
+                <p className="text-yellow-700 font-medium">
+                  Waiting for host to start the game...
+                </p>
+              </div>
             </div>
           )}
 

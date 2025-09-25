@@ -318,11 +318,10 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
       </div>
 
       <GameBoard
-        currentQuestion={questionData.question}
         answers={questionData.answers.map(a => ({
           text: (a as any).text,
-            points: (a as any).points,
-            revealed: (a as any).revealed ?? false
+          points: (a as any).points,
+          revealed: (a as any).revealed ?? false
         }))}
         team1Score={gameState.team1Score}
         team2Score={gameState.team2Score}
