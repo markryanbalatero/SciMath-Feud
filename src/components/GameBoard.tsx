@@ -22,7 +22,6 @@ interface GameBoardProps {
   team3Strikes?: number;
   team4Strikes?: number;
   team5Strikes?: number;
-  strikes: number;
   currentQuestionIndex?: number;
   onRevealAnswer: (index: number) => void;
   // Arduino integration
@@ -51,7 +50,6 @@ const GameBoard: React.FC<GameBoardProps> = ({
   team3Strikes = 0,
   team4Strikes = 0,
   team5Strikes = 0,
-  strikes,
   // optional, currently unused visually:
   currentQuestionIndex,
   onRevealAnswer,
@@ -502,28 +500,6 @@ const GameBoard: React.FC<GameBoardProps> = ({
                 ))}
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Bottom bar */}
-        <div className="flex-shrink-0 mt-3 sm:mt-4 lg:mt-6 flex flex-col items-center gap-2 sm:gap-3 lg:gap-4">
-          <div className="flex space-x-2 sm:space-x-3 lg:space-x-4">
-            {[1, 2, 3].map((strike) => (
-              <div
-                key={strike}
-                className={`w-10 sm:w-12 lg:w-14 xl:w-16 h-10 sm:h-12 lg:h-14 xl:h-16 rounded-full flex items-center justify-center border-2 sm:border-3 transition-all duration-300 ${
-                  strike <= strikes
-                    ? 'bg-red-600 border-red-400 text-white animate-pulse shadow-2xl'
-                    : 'bg-gray-700 border-gray-600 text-gray-500'
-                }`}
-              >
-                <span className="font-black text-sm sm:text-lg lg:text-xl xl:text-2xl">✕</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="text-xs sm:text-sm text-center text-white/70 mt-2">
-            {arduinoConnected ? 'Buzzers Connected' : 'Buzzers Disconnected'}
           </div>
         </div>
       </div>

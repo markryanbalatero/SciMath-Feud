@@ -334,7 +334,6 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
         team3Strikes={teamStrikes.team3}
         team4Strikes={teamStrikes.team4}
         team5Strikes={teamStrikes.team5}
-        strikes={gameState.strikes}
         currentQuestionIndex={gameState.currentQuestionIndex + 1}
         onRevealAnswer={revealAnswer}
         arduinoConnected={connected}

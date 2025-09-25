@@ -341,6 +341,27 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
     }
   };
 
+  // Trigger strike animation without adding actual strikes (for dramatic effect)
+  const triggerStrikeAnimation = async () => {
+    if (!game) return;
+    
+    try {
+      // Use a timestamp approach similar to question reveal
+      const { error } = await supabase
+        .from('games')
+        .update({ show_strike_animation_at: new Date().toISOString() })
+        .eq('id', game.id);
+      
+      if (error) {
+        console.error('Error triggering strike animation:', error);
+      } else {
+        console.log('Strike animation triggered successfully');
+      }
+    } catch (error) {
+      console.error('Error triggering strike animation:', error);
+    }
+  };
+
   // Step UI
   if (step === 'code') {
     return (
@@ -504,6 +525,7 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
       onPauseGame={pauseGame}
       onEndGame={endGame}
       onBackToWelcome={onBackToWelcome}
+      onTriggerStrikeAnimation={triggerStrikeAnimation}
     />
   );
 };

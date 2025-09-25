@@ -63,6 +63,7 @@ CREATE TABLE games (
   team5_score INTEGER DEFAULT 0,
   current_question_index INTEGER DEFAULT 0,
   strikes INTEGER DEFAULT 0,
+  show_strike_animation_at TIMESTAMP WITH TIME ZONE,
   game_status VARCHAR(20) DEFAULT 'waiting', -- waiting, playing, paused, finished
   started_at TIMESTAMP WITH TIME ZONE,
   finished_at TIMESTAMP WITH TIME ZONE,

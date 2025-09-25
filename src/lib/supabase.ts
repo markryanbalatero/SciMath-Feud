@@ -77,6 +77,7 @@ export interface Game {
   team5_strikes: number;
   current_question_index: number;
   strikes: number;
+  show_strike_animation_at?: string;
   game_status: 'waiting' | 'playing' | 'paused' | 'finished';
   started_at?: string;
   finished_at?: string;

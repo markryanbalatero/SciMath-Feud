@@ -26,10 +26,10 @@ interface HostControlProps {
   team3Strikes?: number;
   team4Strikes?: number;
   team5Strikes?: number;
-  strikes: number;
   gameStatus?: 'waiting' | 'playing' | 'paused' | 'finished';
   onRevealAnswer: (index: number, teamId?: number) => void;
   onRevealAnswerNoPoints?: (index: number) => void;
+  onTriggerStrikeAnimation?: () => void;
   onNextQuestion: () => void;
   onAddStrike: (teamId?: number) => void;
   onStartGame?: () => void;
@@ -38,7 +38,7 @@ interface HostControlProps {
   onBackToWelcome: () => void;
 }
 const HostControl: React.FC<HostControlProps> = ({
-  currentQuestion, currentQuestionIndex, totalQuestions, answers, team1Name = 'TEAM NAME (1)', team2Name = 'TEAM NAME (2)', team3Name = 'TEAM NAME (3)', team4Name = 'TEAM NAME (4)', team5Name = 'TEAM NAME (5)', team1Score, team2Score, team3Score, team4Score, team5Score, team1Strikes = 0, team2Strikes = 0, team3Strikes = 0, team4Strikes = 0, team5Strikes = 0, strikes, gameStatus = 'waiting', onRevealAnswer, onRevealAnswerNoPoints, onNextQuestion, onAddStrike, onStartGame, onPauseGame, onEndGame, onBackToWelcome
+  currentQuestion, currentQuestionIndex, totalQuestions, answers, team1Name = 'TEAM NAME (1)', team2Name = 'TEAM NAME (2)', team3Name = 'TEAM NAME (3)', team4Name = 'TEAM NAME (4)', team5Name = 'TEAM NAME (5)', team1Score, team2Score, team3Score, team4Score, team5Score, team1Strikes = 0, team2Strikes = 0, team3Strikes = 0, team4Strikes = 0, team5Strikes = 0, gameStatus = 'waiting', onRevealAnswer, onRevealAnswerNoPoints, onTriggerStrikeAnimation, onNextQuestion, onAddStrike, onStartGame, onPauseGame, onEndGame, onBackToWelcome
 }) => {
   const [selectedTeam, setSelectedTeam] = useState<number>(1);
 
@@ -389,10 +389,6 @@ const HostControl: React.FC<HostControlProps> = ({
                 <span className="text-white/80">Revealed:</span>
                 <div className="text-lg font-bold">{answers.filter(a => a.revealed).length}/{answers.length}</div>
               </div>
-              <div>
-                <span className="text-white/80">Global Strikes:</span>
-                <div className="text-lg font-bold text-red-400">{strikes}/3</div>
-              </div>
             </div>
           </div>
 
@@ -400,6 +396,16 @@ const HostControl: React.FC<HostControlProps> = ({
           <div className="bg-black/30 backdrop-blur-md rounded-xl p-6 border border-white/20">
             <div className="text-white text-lg font-bold mb-4 text-center">Controls</div>
             <div className="space-y-3">
+              {/* Strike Animation Button */}
+              {onTriggerStrikeAnimation && (
+                <button
+                  onClick={onTriggerStrikeAnimation}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors"
+                >
+                  ❌ WRONG ANSWER ANIMATION
+                </button>
+              )}
+              
               <button
                 onClick={onNextQuestion}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors"
