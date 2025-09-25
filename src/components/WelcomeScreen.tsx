@@ -15,7 +15,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStartGame, onSettings, 
   useEffect(() => {
     // Start playing background music when component mounts
     if (audioRef.current) {
-      audioRef.current.volume = 0.3; // Set volume to 30%
+      audioRef.current.volume = 0.7; // Set volume to 30%
       audioRef.current.loop = true; // Loop the music
       audioRef.current.play().catch(error => {
         console.log('Audio autoplay prevented:', error);

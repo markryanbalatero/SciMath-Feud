@@ -400,7 +400,7 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
     return (
       <div className="w-screen h-screen fixed inset-0 bg-gradient-to-b from-blue-800 via-blue-900 to-blue-950 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-white text-3xl font-bold mb-6">🎮 Family Feud</div>
+          <div className="text-white text-3xl font-bold mb-6">🎮 Sci-Math Feud</div>
           <div className="text-yellow-400 text-2xl font-bold mb-4">Waiting for Host to Start Game...</div>
           <div className="text-gray-300 text-lg mb-8">Game Code: {gameCode}</div>
           
@@ -464,7 +464,7 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
     return (
       <div className="w-screen h-screen fixed inset-0 bg-gradient-to-b from-blue-800 via-blue-900 to-blue-950 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-white text-3xl font-bold mb-6">🎮 Family Feud</div>
+          <div className="text-white text-3xl font-bold mb-6">🎮 Sci-Math Feud</div>
           <div className="text-orange-400 text-2xl font-bold mb-4">Game Paused</div>
           <div className="text-gray-300 text-lg mb-8">Waiting for host to resume...</div>
           
