@@ -5,6 +5,7 @@ import type { GameState, Game, GameSet } from '../lib/supabase';
 import { useArduino } from '../hooks/useArduino';
 import correctAnswerSound from '../assets/reveal.mp3';
 import wrongAnswerSound from '../assets/wrong_answer.mp3';
+import playerPressSound from '../assets/player_press.mp3';
 
 interface DatabaseGameScreenProps {
   onBackToWelcome: () => void;
@@ -92,6 +93,20 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
     lastButtonSnapshot.current = [...buttonStates];
   }, [buttonStates, connected, buzzWinnerIndex, teamStrikes]);
 
+  // Play buzzer sound when a team successfully presses their buzzer
+  useEffect(() => {
+    if (buzzWinnerIndex !== null && playerPressAudioRef.current) {
+      try {
+        playerPressAudioRef.current.currentTime = 0; // Reset to start
+        playerPressAudioRef.current.play().catch(error => {
+          console.log('Could not play player press sound:', error);
+        });
+      } catch (error) {
+        console.log('Error playing player press sound:', error);
+      }
+    }
+  }, [buzzWinnerIndex]);
+
   const resetBuzz = useCallback(() => setBuzzWinnerIndex(null), []);
   const [showStrikeAnimation, setShowStrikeAnimation] = useState(false);
   // Fix timeout type for browser builds
@@ -141,6 +156,7 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
   const lastStrikeCountRef = useRef<number>(0);
   const correctAudioRef = useRef<HTMLAudioElement | null>(null);
   const wrongAudioRef = useRef<HTMLAudioElement | null>(null);
+  const playerPressAudioRef = useRef<HTMLAudioElement | null>(null);
   const prevRevealedAnswersRef = useRef<string[]>([]);
 
   useEffect(() => {
@@ -149,9 +165,12 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
     // Initialize audio elements
     correctAudioRef.current = new Audio(correctAnswerSound);
     wrongAudioRef.current = new Audio(wrongAnswerSound);
+    playerPressAudioRef.current = new Audio(playerPressSound);
     
     // Set volume levels
     if (correctAudioRef.current) correctAudioRef.current.volume = 0.7;
+    if (wrongAudioRef.current) wrongAudioRef.current.volume = 0.7;
+    if (playerPressAudioRef.current) playerPressAudioRef.current.volume = 0.8;
     if (wrongAudioRef.current) wrongAudioRef.current.volume = 0.7;
   }, [gameCode]);
 
@@ -641,7 +660,6 @@ const DatabaseGameScreen: React.FC<DatabaseGameScreenProps> = ({
       </div>
 
       <GameBoard
-        currentQuestion={currentQuestion.question}
         answers={answersWithRevealState}
         team1Score={gameState.team1Score}
         team2Score={gameState.team2Score}

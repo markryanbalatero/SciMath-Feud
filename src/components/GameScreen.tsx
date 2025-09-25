@@ -3,6 +3,7 @@ import GameBoard from './GameBoard';
 import { getQuestions } from '../lib/supabase';
 import type { Question, GameState } from '../lib/supabase';
 import { useArduino } from '../hooks/useArduino';
+import playerPressSound from '../assets/player_press.mp3';
 
 interface Answer {
   text: string;
@@ -50,6 +51,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
   const { connected, connecting, error: arduinoError, buttonStates, lastPressedIndex, connect, disconnect, resetBuzzer } = useArduino({ baudRate: 9600, numButtons: 5 });
   const [buzzWinnerIndex, setBuzzWinnerIndex] = useState<number | null>(null);
   const lastButtonSnapshot = useRef<boolean[]>([false, false, false, false, false]);
+  const playerPressAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Detect first transition from not pressed -> pressed across any button with strike gating
   useEffect(() => {
@@ -89,29 +91,32 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
     lastButtonSnapshot.current = [...buttonStates];
   }, [buttonStates, connected, buzzWinnerIndex, teamStrikes]);
 
-  // Simple beep on lock-in (browser tone)
-  const playBeep = useCallback(() => {
+  // Initialize audio and play buzzer press sound
+  useEffect(() => {
+    if (!playerPressAudioRef.current) {
+      playerPressAudioRef.current = new Audio(playerPressSound);
+      playerPressAudioRef.current.volume = 0.8;
+    }
+  }, []);
+
+  const playPlayerPressSound = useCallback(() => {
     try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type = 'sine';
-      o.frequency.value = 1200;
-      o.connect(g);
-      g.connect(ctx.destination);
-      g.gain.setValueAtTime(0.0001, ctx.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.15);
-      o.start();
-      o.stop(ctx.currentTime + 0.16);
-    } catch {}
+      if (playerPressAudioRef.current) {
+        playerPressAudioRef.current.currentTime = 0; // Reset to start
+        playerPressAudioRef.current.play().catch(error => {
+          console.log('Could not play player press sound:', error);
+        });
+      }
+    } catch (error) {
+      console.log('Error playing player press sound:', error);
+    }
   }, []);
 
   useEffect(() => {
     if (buzzWinnerIndex !== null) {
-      playBeep();
+      playPlayerPressSound();
     }
-  }, [buzzWinnerIndex, playBeep]);
+  }, [buzzWinnerIndex, playPlayerPressSound]);
 
   const resetBuzz = () => setBuzzWinnerIndex(null);
 
@@ -318,7 +323,6 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
       </div>
 
       <GameBoard
-        currentQuestion={questionData.question}
         answers={questionData.answers.map(a => ({
           text: (a as any).text,
             points: (a as any).points,

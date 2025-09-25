@@ -7,7 +7,6 @@ interface Answer {
   revealed: boolean;
 }
 interface HostControlProps {
-  currentQuestion: string;
   currentQuestionIndex: number;
   totalQuestions: number;
   answers: Answer[];
@@ -38,7 +37,7 @@ interface HostControlProps {
   onBackToWelcome: () => void;
 }
 const HostControl: React.FC<HostControlProps> = ({
-  currentQuestion, currentQuestionIndex, totalQuestions, answers, team1Name = 'TEAM NAME (1)', team2Name = 'TEAM NAME (2)', team3Name = 'TEAM NAME (3)', team4Name = 'TEAM NAME (4)', team5Name = 'TEAM NAME (5)', team1Score, team2Score, team3Score, team4Score, team5Score, team1Strikes = 0, team2Strikes = 0, team3Strikes = 0, team4Strikes = 0, team5Strikes = 0, gameStatus = 'waiting', onRevealAnswer, onRevealAnswerNoPoints, onTriggerStrikeAnimation, onNextQuestion, onAddStrike, onStartGame, onPauseGame, onEndGame, onBackToWelcome
+  currentQuestionIndex, totalQuestions, answers, team1Name = 'TEAM NAME (1)', team2Name = 'TEAM NAME (2)', team3Name = 'TEAM NAME (3)', team4Name = 'TEAM NAME (4)', team5Name = 'TEAM NAME (5)', team1Score, team2Score, team3Score, team4Score, team5Score, team1Strikes = 0, team2Strikes = 0, team3Strikes = 0, team4Strikes = 0, team5Strikes = 0, gameStatus = 'waiting', onRevealAnswer, onRevealAnswerNoPoints, onTriggerStrikeAnimation, onNextQuestion, onAddStrike, onStartGame, onPauseGame, onEndGame, onBackToWelcome
 }) => {
   const [selectedTeam, setSelectedTeam] = useState<number>(1);
 
@@ -221,7 +220,6 @@ const HostControl: React.FC<HostControlProps> = ({
         <div className="bg-black/30 backdrop-blur-md rounded-xl p-6 mb-8 border border-white/20">
           <div className="text-center">
             <div className="text-white/80 text-lg mb-2">Question {currentQuestionIndex + 1} of {totalQuestions}</div>
-            <div className="text-white text-2xl font-bold">{currentQuestion}</div>
           </div>
         </div>
 

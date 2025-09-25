@@ -496,7 +496,6 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
 
   return (
     <HostControl
-      currentQuestion={currentQuestion.question}
       currentQuestionIndex={gameState.currentQuestionIndex}
       totalQuestions={gameSet.questions.length}
       answers={answersWithRevealState}
