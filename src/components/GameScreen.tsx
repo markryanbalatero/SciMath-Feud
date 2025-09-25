@@ -51,6 +51,27 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
   const [buzzWinnerIndex, setBuzzWinnerIndex] = useState<number | null>(null);
   const lastButtonSnapshot = useRef<boolean[]>([false, false, false, false, false]);
 
+  // Background music for game screen
+  const bgAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (bgAudioRef.current) {
+      bgAudioRef.current.volume = 0.3;
+      bgAudioRef.current.loop = true;
+      bgAudioRef.current.play().catch(error => {
+        // autoplay may be blocked by browser; ignore silently
+        // console.log('GameScreen audio autoplay prevented:', err);
+      });
+    }
+
+    return () => {
+      if (bgAudioRef.current) {
+        bgAudioRef.current.pause();
+        bgAudioRef.current.currentTime = 0;
+      }
+    };
+  }, []);
+
   // Detect first transition from not pressed -> pressed across any button with strike gating
   useEffect(() => {
     if (!connected) {
@@ -206,9 +227,59 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
     }
   };
 
-  // handleGameEnd removed (unused in current simplified flow)
+  // --- Persist / restore to survive full page refreshes ---
+  useEffect(() => {
+    // restore saved state if present (only when not using an explicit custom game prop)
+    try {
+      const saved = sessionStorage.getItem('gameScreenState');
+      if (saved && !gameData) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.gameState) setGameState(prev => ({ ...prev, ...parsed.gameState }));
+        if (parsed?.questions) setQuestions(parsed.questions);
+        if (parsed?.customGame) setCustomGame(parsed.customGame);
+        setLoading(false);
+      }
+    } catch (err) {
+      // ignore parse errors
+      console.warn('Failed to restore game screen state:', err);
+    }
 
-  // (Optional) future helpers for strikes, scores, etc. removed due to unused.
+    // mark active screen and fix URL so refresh stays here
+    try {
+      sessionStorage.setItem('activeScreen', 'game');
+      window.history.replaceState(null, '', '/game');
+    } catch {}
+
+    const handleBeforeUnload = () => {
+      try {
+        sessionStorage.setItem('gameScreenState', JSON.stringify({
+          gameState,
+          questions,
+          customGame
+        }));
+      } catch {}
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      // keep saved state in sessionStorage so refresh returns to this screen;
+      // if you want to clear when leaving, call sessionStorage.removeItem('gameScreenState') here.
+    };
+    // Intentionally omit gameState/questions/customGame from deps to avoid adding and removing listener frequently.
+    // However restore uses current values via separate effect below.
+  }, []); // run once on mount
+
+  // keep a live copy in sessionStorage whenever important state changes
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('gameScreenState', JSON.stringify({
+        gameState,
+        questions,
+        customGame
+      }));
+    } catch {}
+  }, [gameState, questions, customGame]);
 
   if (loading) {
     return (
@@ -216,7 +287,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-yellow-400 mx-auto mb-8"></div>
           <h2 className="text-4xl font-bold text-yellow-300 mb-4">Loading Game...</h2>
-          <p className="text-white/70">Preparing Family Feud questions</p>
+          <p className="text-white/70">Preparing Sci-Math Feud questions</p>
         </div>
       </div>
     );
@@ -318,11 +389,10 @@ const GameScreen: React.FC<GameScreenProps> = ({ onBackToWelcome, gameData }) =>
       </div>
 
       <GameBoard
-        currentQuestion={questionData.question}
         answers={questionData.answers.map(a => ({
           text: (a as any).text,
-            points: (a as any).points,
-            revealed: (a as any).revealed ?? false
+          points: (a as any).points,
+          revealed: (a as any).revealed ?? false
         }))}
         team1Score={gameState.team1Score}
         team2Score={gameState.team2Score}

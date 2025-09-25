@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 interface GameBoardProps {
-  currentQuestion: string;
+  currentQuestion?: string; // Make optional since we're hiding it
   answers: Array<{
     text: string;
     points: number;
@@ -33,7 +33,7 @@ interface GameBoardProps {
 }
 
 const GameBoard: React.FC<GameBoardProps> = ({
-  currentQuestion,
+  currentQuestion, // Still accept it but don't use it
   answers,
   team1Score = 0,
   team2Score = 0,
@@ -324,11 +324,16 @@ const GameBoard: React.FC<GameBoardProps> = ({
       </div>
 
       <div className="relative z-10 w-full h-full flex flex-col px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-6">
-        {/* Question */}
+        {/* Question Section - HIDDEN for manual host reading */}
         <div className="flex-shrink-0 mb-3 sm:mb-4 lg:mb-6 w-full max-w-5xl mx-auto">
-          <div className="bg-gradient-to-r from-black/80 via-black/70 to-black/80 backdrop-blur-md border-2 border-yellow-400/50 rounded-xl lg:rounded-2xl px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-6 shadow-2xl">
-            <div className="text-white text-base sm:text-lg lg:text-xl xl:text-2xl font-bold text-center drop-shadow-lg leading-tight">
-              {currentQuestion}
+          <div className="bg-gradient-to-r from-blue-800 to-blue-900 border-4 border-yellow-400 rounded-2xl shadow-2xl p-6 min-h-[120px] flex items-center justify-center">
+            <div className="text-center">
+              <div className="text-4xl md:text-5xl font-black text-yellow-300 mb-2">
+                🎯 SCI-MATH FEUD 🎯
+              </div>
+              {/* <div className="text-lg md:text-xl text-white/80 font-semibold">
+                Host: Read Question Aloud
+              </div> */}
             </div>
           </div>
         </div>

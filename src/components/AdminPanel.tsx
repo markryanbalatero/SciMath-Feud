@@ -152,7 +152,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onBackToWelcome }) => {
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white drop-shadow-2xl mb-2">
             HOST CONTROL PANEL
           </h1>
-          <p className="text-lg text-blue-200">Create and save your Family Feud game set</p>
+          <p className="text-lg text-blue-200">Create and save your Sci-Math Feud game set</p>
           {savedGameCode && (
             <div className="mt-4 p-4 bg-green-600/80 rounded-lg border border-green-400">
               <p className="text-white font-bold">✅ Game Set Saved!</p>
