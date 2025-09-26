@@ -33,6 +33,19 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
   const [customTeam5Name, setCustomTeam5Name] = useState('');
   // Step state
   const [step, setStep] = useState<'code' | 'teams' | 'control'>('code');
+  // Undo functionality states
+  const [previousGameState, setPreviousGameState] = useState<GameState | null>(null);
+  const [hasUndo, setHasUndo] = useState(false);
+  // Strike undo functionality
+  const [previousStrikes, setPreviousStrikes] = useState<{
+    strikes: number;
+    team1Strikes: number;
+    team2Strikes: number;
+    team3Strikes: number;
+    team4Strikes: number;
+    team5Strikes: number;
+  } | null>(null);
+  const [hasStrikeUndo, setHasStrikeUndo] = useState(false);
 
   // Poll game data for real-time updates
   const pollGameData = async () => {
@@ -64,6 +77,151 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
       }
     } catch (error) {
       console.error('Error polling game data:', error);
+    }
+  };
+
+  // Save current game state before making changes
+  const saveCurrentGameState = () => {
+    setPreviousGameState({ ...gameState });
+    setHasUndo(true);
+  };
+
+  // Undo last score change
+  const undoLastScoreChange = async () => {
+    if (!previousGameState || !game) return;
+
+    try {
+      // Update database with previous scores
+      await updateGameScore(
+        game.id,
+        previousGameState.team1Score,
+        previousGameState.team2Score,
+        previousGameState.team3Score,
+        previousGameState.team4Score,
+        previousGameState.team5Score,
+        previousGameState.strikes,
+        previousGameState.currentQuestionIndex
+      );
+
+      // Update local state
+      setGameState(previousGameState);
+      setHasUndo(false);
+      setPreviousGameState(null);
+    } catch (error) {
+      console.error('Error undoing score change:', error);
+    }
+  };
+
+  // Add custom score to a team
+  const addCustomScore = async (teamId: number, points: number) => {
+    if (!game) return;
+
+    // Save current state before making changes
+    saveCurrentGameState();
+
+    try {
+      // Get current scores
+      const currentScores = [
+        gameState.team1Score,
+        gameState.team2Score,
+        gameState.team3Score,
+        gameState.team4Score,
+        gameState.team5Score
+      ];
+
+      // Add points to the selected team
+      if (teamId >= 1 && teamId <= 5) {
+        currentScores[teamId - 1] += points;
+      }
+
+      // Update local state
+      setGameState(prev => ({
+        ...prev,
+        team1Score: currentScores[0],
+        team2Score: currentScores[1],
+        team3Score: currentScores[2],
+        team4Score: currentScores[3],
+        team5Score: currentScores[4]
+      }));
+
+      // Update game score in database
+      await updateGameScore(
+        game.id,
+        currentScores[0],
+        currentScores[1],
+        currentScores[2],
+        currentScores[3],
+        currentScores[4],
+        gameState.strikes,
+        gameState.currentQuestionIndex
+      );
+    } catch (error) {
+      console.error('Error adding custom score:', error);
+    }
+  };
+
+  // Save current strike state before making changes
+  const saveCurrentStrikeState = async () => {
+    if (!game) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('games')
+        .select('strikes, team1_strikes, team2_strikes, team3_strikes, team4_strikes, team5_strikes')
+        .eq('id', game.id)
+        .single();
+
+      if (error) throw error;
+
+      setPreviousStrikes({
+        strikes: data.strikes || 0,
+        team1Strikes: data.team1_strikes || 0,
+        team2Strikes: data.team2_strikes || 0,
+        team3Strikes: data.team3_strikes || 0,
+        team4Strikes: data.team4_strikes || 0,
+        team5Strikes: data.team5_strikes || 0
+      });
+      setHasStrikeUndo(true);
+    } catch (error) {
+      console.error('Error saving current strike state:', error);
+    }
+  };
+
+  // Undo last strike change
+  const undoLastStrikeChange = async () => {
+    if (!previousStrikes || !game) return;
+
+    try {
+      // Update database with previous strikes
+      await updateGameScore(
+        game.id,
+        gameState.team1Score,
+        gameState.team2Score,
+        gameState.team3Score,
+        gameState.team4Score,
+        gameState.team5Score,
+        previousStrikes.strikes,
+        gameState.currentQuestionIndex,
+        previousStrikes.team1Strikes,
+        previousStrikes.team2Strikes,
+        previousStrikes.team3Strikes,
+        previousStrikes.team4Strikes,
+        previousStrikes.team5Strikes
+      );
+
+      // Update local state
+      setGameState(prev => ({
+        ...prev,
+        strikes: previousStrikes.strikes
+      }));
+
+      setHasStrikeUndo(false);
+      setPreviousStrikes(null);
+      
+      // Re-poll game data to get updated strikes
+      pollGameData();
+    } catch (error) {
+      console.error('Error undoing strike change:', error);
     }
   };
 
@@ -154,6 +312,9 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
 
     const answer = currentQuestion.answers[answerIndex];
     if (revealedAnswerIds.includes(answer.id)) return;
+
+    // Save current state before making changes
+    saveCurrentGameState();
 
     try {
       // Add to revealed answers in database
@@ -274,6 +435,9 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
       return;
     }
 
+    // Save current strike state before making changes
+    await saveCurrentStrikeState();
+
     if (teamId) {
       console.log('Adding strike to team', teamId, 'for game', game.id);
       // Add strike to specific team
@@ -359,6 +523,64 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
       }
     } catch (error) {
       console.error('Error triggering strike animation:', error);
+    }
+  };
+
+  // Trigger sound effects on main screen
+  const triggerIntenseSound = async () => {
+    if (!game) return;
+    
+    try {
+      const { error } = await supabase
+        .from('games')
+        .update({ play_intense_sound_at: new Date().toISOString() })
+        .eq('id', game.id);
+      
+      if (error) {
+        console.error('Error triggering intense sound:', error);
+      } else {
+        console.log('Intense sound triggered successfully');
+      }
+    } catch (error) {
+      console.error('Error triggering intense sound:', error);
+    }
+  };
+
+  const triggerWinningSound = async () => {
+    if (!game) return;
+    
+    try {
+      const { error } = await supabase
+        .from('games')
+        .update({ play_winning_sound_at: new Date().toISOString() })
+        .eq('id', game.id);
+      
+      if (error) {
+        console.error('Error triggering winning sound:', error);
+      } else {
+        console.log('Winning sound triggered successfully');
+      }
+    } catch (error) {
+      console.error('Error triggering winning sound:', error);
+    }
+  };
+
+  const triggerStopSounds = async () => {
+    if (!game) return;
+    
+    try {
+      const { error } = await supabase
+        .from('games')
+        .update({ stop_sounds_at: new Date().toISOString() })
+        .eq('id', game.id);
+      
+      if (error) {
+        console.error('Error triggering stop sounds:', error);
+      } else {
+        console.log('Stop sounds triggered successfully');
+      }
+    } catch (error) {
+      console.error('Error triggering stop sounds:', error);
     }
   };
 
@@ -524,6 +746,14 @@ const HostControlScreen: React.FC<HostControlScreenProps> = ({ onBackToWelcome }
       onEndGame={endGame}
       onBackToWelcome={onBackToWelcome}
       onTriggerStrikeAnimation={triggerStrikeAnimation}
+      hasUndo={hasUndo}
+      onUndoLastScoreChange={undoLastScoreChange}
+      onAddCustomScore={addCustomScore}
+      hasStrikeUndo={hasStrikeUndo}
+      onUndoLastStrikeChange={undoLastStrikeChange}
+      onTriggerIntenseSound={triggerIntenseSound}
+      onTriggerWinningSound={triggerWinningSound}
+      onTriggerStopSounds={triggerStopSounds}
     />
   );
 };

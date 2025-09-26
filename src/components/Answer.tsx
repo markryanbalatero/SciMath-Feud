@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 
 interface Answer {
   id: string;
@@ -35,63 +35,21 @@ interface HostControlProps {
   onPauseGame?: () => void;
   onEndGame?: () => void;
   onBackToWelcome: () => void;
+  hasUndo?: boolean;
+  onUndoLastScoreChange?: () => void;
+  onAddCustomScore?: (teamId: number, points: number) => void;
+  hasStrikeUndo?: boolean;
+  onUndoLastStrikeChange?: () => void;
+  onTriggerIntenseSound?: () => void;
+  onTriggerWinningSound?: () => void;
+  onTriggerStopSounds?: () => void;
 }
 const HostControl: React.FC<HostControlProps> = ({
-  currentQuestionIndex, totalQuestions, answers, team1Name = 'TEAM NAME (1)', team2Name = 'TEAM NAME (2)', team3Name = 'TEAM NAME (3)', team4Name = 'TEAM NAME (4)', team5Name = 'TEAM NAME (5)', team1Score, team2Score, team3Score, team4Score, team5Score, team1Strikes = 0, team2Strikes = 0, team3Strikes = 0, team4Strikes = 0, team5Strikes = 0, gameStatus = 'waiting', onRevealAnswer, onRevealAnswerNoPoints, onTriggerStrikeAnimation, onNextQuestion, onAddStrike, onStartGame, onPauseGame, onEndGame, onBackToWelcome
+  currentQuestionIndex, totalQuestions, answers, team1Name = 'TEAM NAME (1)', team2Name = 'TEAM NAME (2)', team3Name = 'TEAM NAME (3)', team4Name = 'TEAM NAME (4)', team5Name = 'TEAM NAME (5)', team1Score, team2Score, team3Score, team4Score, team5Score, team1Strikes = 0, team2Strikes = 0, team3Strikes = 0, team4Strikes = 0, team5Strikes = 0, gameStatus = 'waiting', onRevealAnswer, onRevealAnswerNoPoints, onTriggerStrikeAnimation, onNextQuestion, onAddStrike, onStartGame, onPauseGame, onEndGame, onBackToWelcome, hasUndo = false, onUndoLastScoreChange, onAddCustomScore, hasStrikeUndo = false, onUndoLastStrikeChange, onTriggerIntenseSound, onTriggerWinningSound, onTriggerStopSounds
 }) => {
   const [selectedTeam, setSelectedTeam] = useState<number>(1);
-
-  // Sound effect refs
-  const intenseAudioRef = useRef<HTMLAudioElement | null>(null);
-  const winningRoundAudioRef = useRef<HTMLAudioElement | null>(null);
-
-  // Initialize audio elements
-  useEffect(() => {
-    intenseAudioRef.current = new Audio('/src/assets/intense.mp3');
-    winningRoundAudioRef.current = new Audio('/src/assets/winning_round.mp3');
-
-    // Set volume levels
-    if (intenseAudioRef.current) intenseAudioRef.current.volume = 0.7;
-    if (winningRoundAudioRef.current) winningRoundAudioRef.current.volume = 0.8;
-
-    return () => {
-      // Cleanup audio elements
-      if (intenseAudioRef.current) {
-        intenseAudioRef.current.pause();
-        intenseAudioRef.current = null;
-      }
-      if (winningRoundAudioRef.current) {
-        winningRoundAudioRef.current.pause();
-        winningRoundAudioRef.current = null;
-      }
-    };
-  }, []);
-
-  // Sound effect functions
-  const playIntenseSound = () => {
-    if (intenseAudioRef.current) {
-      intenseAudioRef.current.currentTime = 0;
-      intenseAudioRef.current.play().catch(e => console.log('Error playing intense sound:', e));
-    }
-  };
-
-  const playWinningRoundSound = () => {
-    if (winningRoundAudioRef.current) {
-      winningRoundAudioRef.current.currentTime = 0;
-      winningRoundAudioRef.current.play().catch(e => console.log('Error playing winning round sound:', e));
-    }
-  };
-
-  const stopAllSounds = () => {
-    if (intenseAudioRef.current) {
-      intenseAudioRef.current.pause();
-      intenseAudioRef.current.currentTime = 0;
-    }
-    if (winningRoundAudioRef.current) {
-      winningRoundAudioRef.current.pause();
-      winningRoundAudioRef.current.currentTime = 0;
-    }
-  };
+  const [customScore, setCustomScore] = useState<string>('');
+  const [showCustomScorePanel, setShowCustomScorePanel] = useState<boolean>(false);
 
   const teams = [
     { id: 1, name: team1Name, score: team1Score, strikes: team1Strikes },
@@ -109,6 +67,26 @@ const HostControl: React.FC<HostControlProps> = ({
     if (onRevealAnswerNoPoints) {
       onRevealAnswerNoPoints(answerIndex);
     }
+  };
+
+  // Custom score functions
+  const handleAddCustomScore = () => {
+    const points = parseInt(customScore);
+    if (isNaN(points) || points === 0) {
+      alert('Please enter a valid number');
+      return;
+    }
+    
+    if (onAddCustomScore) {
+      onAddCustomScore(selectedTeam, points);
+      setCustomScore('');
+      setShowCustomScorePanel(false);
+    }
+  };
+
+  const toggleCustomScorePanel = () => {
+    setShowCustomScorePanel(!showCustomScorePanel);
+    setCustomScore('');
   };
 
   // Ensure we have 8 answers, padding with empty ones if needed
@@ -144,37 +122,150 @@ const HostControl: React.FC<HostControlProps> = ({
             <div className="text-white text-xs font-bold mb-3 text-center">SOUND CONTROL</div>
             <div className="flex gap-3">
               {/* Intense Sound Button */}
-              <button
-                onClick={playIntenseSound}
-                className="px-4 py-3 bg-gradient-to-br from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 text-white rounded-lg flex flex-col items-center justify-center transition-all duration-200 transform hover:scale-105 shadow-lg min-w-[80px]"
-                title="Play Intense Background Music"
-              >
-                <span className="text-lg mb-1">🔥</span>
-                <span className="text-xs font-bold">INTENSE</span>
-              </button>
+              {onTriggerIntenseSound && (
+                <button
+                  onClick={onTriggerIntenseSound}
+                  className="px-4 py-3 bg-gradient-to-br from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 text-white rounded-lg flex flex-col items-center justify-center transition-all duration-200 transform hover:scale-105 shadow-lg min-w-[80px]"
+                  title="Play Intense Background Music on Main Screen"
+                >
+                  <span className="text-lg mb-1">🔥</span>
+                  <span className="text-xs font-bold">INTENSE</span>
+                </button>
+              )}
 
               {/* Winning Round Sound Button */}
-              <button
-                onClick={playWinningRoundSound}
-                className="px-4 py-3 bg-gradient-to-br from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 text-white rounded-lg flex flex-col items-center justify-center transition-all duration-200 transform hover:scale-105 shadow-lg min-w-[80px]"
-                title="Play Victory Sound Effect"
-              >
-                <span className="text-lg mb-1">🏆</span>
-                <span className="text-xs font-bold">VICTORY</span>
-              </button>
+              {onTriggerWinningSound && (
+                <button
+                  onClick={onTriggerWinningSound}
+                  className="px-4 py-3 bg-gradient-to-br from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 text-white rounded-lg flex flex-col items-center justify-center transition-all duration-200 transform hover:scale-105 shadow-lg min-w-[80px]"
+                  title="Play Victory Sound Effect on Main Screen"
+                >
+                  <span className="text-lg mb-1">🏆</span>
+                  <span className="text-xs font-bold">VICTORY</span>
+                </button>
+              )}
 
               {/* Stop All Sounds Button */}
-              <button
-                onClick={stopAllSounds}
-                className="px-4 py-3 bg-gradient-to-br from-gray-600 to-gray-800 hover:from-gray-500 hover:to-gray-700 text-white rounded-lg flex flex-col items-center justify-center transition-all duration-200 transform hover:scale-105 shadow-lg min-w-[80px]"
-                title="Stop All Audio Playback"
-              >
-                <span className="text-lg mb-1">🔇</span>
-                <span className="text-xs font-bold">STOP</span>
-              </button>
+              {onTriggerStopSounds && (
+                <button
+                  onClick={onTriggerStopSounds}
+                  className="px-4 py-3 bg-gradient-to-br from-gray-600 to-gray-800 hover:from-gray-500 hover:to-gray-700 text-white rounded-lg flex flex-col items-center justify-center transition-all duration-200 transform hover:scale-105 shadow-lg min-w-[80px]"
+                  title="Stop All Audio Playback on Main Screen"
+                >
+                  <span className="text-lg mb-1">🔇</span>
+                  <span className="text-xs font-bold">STOP</span>
+                </button>
+              )}
             </div>
           </div>
+
+          {/* Undo Button */}
+          {hasUndo && onUndoLastScoreChange && (
+            <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+              <div className="text-white text-xs font-bold mb-3 text-center">UNDO SCORE</div>
+              <button
+                onClick={onUndoLastScoreChange}
+                className="px-4 py-3 bg-gradient-to-br from-purple-600 to-purple-800 hover:from-purple-500 hover:to-purple-700 text-white rounded-lg flex flex-col items-center justify-center transition-all duration-200 transform hover:scale-105 shadow-lg min-w-[80px]"
+                title="Undo Last Score Change"
+              >
+                <span className="text-lg mb-1">↶</span>
+                <span className="text-xs font-bold">SCORE</span>
+              </button>
+            </div>
+          )}
+
+          {/* Undo Strike Button */}
+          {hasStrikeUndo && onUndoLastStrikeChange && (
+            <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+              <div className="text-white text-xs font-bold mb-3 text-center">UNDO STRIKE</div>
+              <button
+                onClick={onUndoLastStrikeChange}
+                className="px-4 py-3 bg-gradient-to-br from-orange-600 to-orange-800 hover:from-orange-500 hover:to-orange-700 text-white rounded-lg flex flex-col items-center justify-center transition-all duration-200 transform hover:scale-105 shadow-lg min-w-[80px]"
+                title="Undo Last Strike Change"
+              >
+                <span className="text-lg mb-1">↶</span>
+                <span className="text-xs font-bold">STRIKE</span>
+              </button>
+            </div>
+          )}
+
+          {/* Custom Score Addition */}
+          {onAddCustomScore && (
+            <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+              <div className="text-white text-xs font-bold mb-3 text-center">ADD SCORE</div>
+              <button
+                onClick={toggleCustomScorePanel}
+                className="px-4 py-3 bg-gradient-to-br from-green-600 to-green-800 hover:from-green-500 hover:to-green-700 text-white rounded-lg flex flex-col items-center justify-center transition-all duration-200 transform hover:scale-105 shadow-lg min-w-[80px]"
+                title="Add Custom Score to Team"
+              >
+                <span className="text-lg mb-1">➕</span>
+                <span className="text-xs font-bold">SCORE</span>
+              </button>
+            </div>
+          )}
+
+          {/* Strike Animation Button */}
+          {onTriggerStrikeAnimation && (
+            <div className="bg-black/30 backdrop-blur-md rounded-xl p-4 border border-white/20">
+              <div className="text-white text-xs font-bold mb-3 text-center">WRONG ANSWER</div>
+              <button
+                onClick={onTriggerStrikeAnimation}
+                className="px-4 py-3 bg-gradient-to-br from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 text-white rounded-lg flex flex-col items-center justify-center transition-all duration-200 transform hover:scale-105 shadow-lg min-w-[80px]"
+                title="Show Wrong Answer Animation"
+              >
+                <span className="text-lg mb-1">❌</span>
+                <span className="text-xs font-bold">ANIM</span>
+              </button>
+            </div>
+          )}
         </div>
+
+        {/* Custom Score Panel */}
+        {showCustomScorePanel && onAddCustomScore && (
+          <div className="mt-4 bg-black/30 backdrop-blur-md rounded-xl p-6 border border-white/20">
+            <div className="text-white text-lg font-bold mb-4 text-center">Add Custom Score</div>
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <label className="block text-white text-sm font-bold mb-2">Select Team:</label>
+                <select 
+                  value={selectedTeam} 
+                  onChange={(e) => setSelectedTeam(parseInt(e.target.value))}
+                  className="w-full px-3 py-2 bg-gray-800 text-white border border-gray-600 rounded-lg focus:border-blue-400 focus:outline-none"
+                >
+                  {teams.filter(team => team.name && team.name.trim() !== '').map(team => (
+                    <option key={team.id} value={team.id}>
+                      {team.name} (Current: {team.score})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex-1">
+                <label className="block text-white text-sm font-bold mb-2">Points:</label>
+                <input
+                  type="number"
+                  value={customScore}
+                  onChange={(e) => setCustomScore(e.target.value)}
+                  placeholder="Enter points (+ or -)"
+                  className="w-full px-3 py-2 bg-gray-800 text-white border border-gray-600 rounded-lg focus:border-blue-400 focus:outline-none"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={handleAddCustomScore}
+                  className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors"
+                >
+                  Add Score
+                </button>
+                <button
+                  onClick={toggleCustomScorePanel}
+                  className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center gap-3">
           <div className={`px-3 py-1 rounded-full text-sm font-bold ${gameStatus === 'waiting' ? 'bg-yellow-600 text-yellow-100' :
@@ -183,6 +274,16 @@ const HostControl: React.FC<HostControlProps> = ({
                   'bg-red-600 text-red-100'}`}>
             {gameStatus.toUpperCase()}
           </div>
+
+          {/* Undo Button */}
+          {hasUndo && onUndoLastScoreChange && (
+            <button
+              onClick={onUndoLastScoreChange}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-6 py-3 rounded-lg transition-colors flex items-center gap-2"
+            >
+              ↶ UNDO LAST CHANGE
+            </button>
+          )}
 
           {gameStatus === 'waiting' && onStartGame && (
             <button
@@ -394,16 +495,6 @@ const HostControl: React.FC<HostControlProps> = ({
           <div className="bg-black/30 backdrop-blur-md rounded-xl p-6 border border-white/20">
             <div className="text-white text-lg font-bold mb-4 text-center">Controls</div>
             <div className="space-y-3">
-              {/* Strike Animation Button */}
-              {onTriggerStrikeAnimation && (
-                <button
-                  onClick={onTriggerStrikeAnimation}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors"
-                >
-                  ❌ WRONG ANSWER ANIMATION
-                </button>
-              )}
-              
               <button
                 onClick={onNextQuestion}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors"

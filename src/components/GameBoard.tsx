@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { supabase } from '../lib/supabase';
 
 interface GameBoardProps {
   answers: Array<{
@@ -29,6 +30,8 @@ interface GameBoardProps {
   lastPressedIndex?: number | null;
   buzzWinnerIndex?: number | null;
   showStrikeAnimation?: boolean;
+  // Sound control
+  gameId?: string;
 }
 
 const GameBoard: React.FC<GameBoardProps> = ({
@@ -55,7 +58,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
   buttonStates = [false, false, false, false, false],
   lastPressedIndex = null,
   buzzWinnerIndex = null,
-  showStrikeAnimation = false
+  showStrikeAnimation = false,
+  gameId
 }) => {
   // Track previous scores to detect changes
   const [prevScores, setPrevScores] = useState({
@@ -224,6 +228,96 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
     setPrevScores(currentScores);
   }, [team1Score, team2Score, team3Score, team4Score, team5Score]);
+
+  // Sound effect refs
+  const intenseAudioRef = useRef<HTMLAudioElement | null>(null);
+  const winningRoundAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Initialize audio elements
+  useEffect(() => {
+    intenseAudioRef.current = new Audio('/src/assets/intense.mp3');
+    winningRoundAudioRef.current = new Audio('/src/assets/winning_round.mp3');
+
+    // Set volume levels
+    if (intenseAudioRef.current) intenseAudioRef.current.volume = 0.7;
+    if (winningRoundAudioRef.current) winningRoundAudioRef.current.volume = 0.8;
+
+    return () => {
+      // Cleanup audio elements
+      if (intenseAudioRef.current) {
+        intenseAudioRef.current.pause();
+        intenseAudioRef.current = null;
+      }
+      if (winningRoundAudioRef.current) {
+        winningRoundAudioRef.current.pause();
+        winningRoundAudioRef.current = null;
+      }
+    };
+  }, []);
+
+  // Listen for sound triggers from database
+  const lastSoundTimestamps = useRef({
+    intense: null as string | null,
+    winning: null as string | null,
+    stop: null as string | null
+  });
+
+  useEffect(() => {
+    if (!gameId) return;
+
+    const pollSoundTriggers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('games')
+          .select('play_intense_sound_at, play_winning_sound_at, stop_sounds_at')
+          .eq('id', gameId)
+          .single();
+
+        if (error) {
+          console.error('Error polling sound triggers:', error);
+          return;
+        }
+
+        // Check for intense sound trigger
+        if (data.play_intense_sound_at && data.play_intense_sound_at !== lastSoundTimestamps.current.intense) {
+          lastSoundTimestamps.current.intense = data.play_intense_sound_at;
+          if (intenseAudioRef.current) {
+            intenseAudioRef.current.currentTime = 0;
+            intenseAudioRef.current.play().catch(e => console.log('Error playing intense sound:', e));
+          }
+        }
+
+        // Check for winning sound trigger
+        if (data.play_winning_sound_at && data.play_winning_sound_at !== lastSoundTimestamps.current.winning) {
+          lastSoundTimestamps.current.winning = data.play_winning_sound_at;
+          if (winningRoundAudioRef.current) {
+            winningRoundAudioRef.current.currentTime = 0;
+            winningRoundAudioRef.current.play().catch(e => console.log('Error playing winning sound:', e));
+          }
+        }
+
+        // Check for stop sounds trigger
+        if (data.stop_sounds_at && data.stop_sounds_at !== lastSoundTimestamps.current.stop) {
+          lastSoundTimestamps.current.stop = data.stop_sounds_at;
+          if (intenseAudioRef.current) {
+            intenseAudioRef.current.pause();
+            intenseAudioRef.current.currentTime = 0;
+          }
+          if (winningRoundAudioRef.current) {
+            winningRoundAudioRef.current.pause();
+            winningRoundAudioRef.current.currentTime = 0;
+          }
+        }
+      } catch (error) {
+        console.error('Error polling sound triggers:', error);
+      }
+    };
+
+    // Poll every 500ms for sound triggers
+    const interval = setInterval(pollSoundTriggers, 500);
+
+    return () => clearInterval(interval);
+  }, [gameId]);
 
   const handleAnswerClick = (index: number) => {
     if (!answers[index]?.revealed) {
@@ -452,7 +546,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
               </div>
 
               {/* Team 4 */}
-              <div className={teamHighlight(3, "bg-gradient-to-br from-purple-700 to-purple-800 border-2 sm:border-3 lg:border-4 border-yellow-400 rounded-xl lg:rounded-2xl w-20 sm:w-28 lg:w-36 xl:w-40 h-24 sm:h-32 lg:h-40 xl:h-44 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden transition-all duration-200")}>
+              <div className={teamHighlight(3, "bg-gradient-to-br from-red-900 to-red-950 border-2 sm:border-3 lg:border-4 border-yellow-400 rounded-xl lg:rounded-2xl w-20 sm:w-28 lg:w-36 xl:w-40 h-24 sm:h-32 lg:h-40 xl:h-44 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden transition-all duration-200")}>
                 <div className={getTeamBoxClasses(4, "absolute inset-0 rounded-xl lg:rounded-2xl")}></div>
                 <div className="absolute inset-1 sm:inset-2 border-2 border-dotted border-yellow-300 rounded-lg lg:rounded-xl"></div>
                 <div className="text-white font-bold text-xs sm:text-sm lg:text-base xl:text-lg drop-shadow-lg z-10 mb-1 text-center px-1">
@@ -473,7 +567,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
           {/* Team 5 at bottom */}
           <div className="flex justify-center mt-4 sm:mt-6">
-            <div className={teamHighlight(4, "bg-gradient-to-br from-orange-700 to-orange-800 border-2 sm:border-3 lg:border-4 border-yellow-400 rounded-xl lg:rounded-2xl w-24 sm:w-32 lg:w-40 xl:w-44 h-20 sm:h-24 lg:h-28 xl:h-32 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden transition-all duration-200")}>
+            <div className={teamHighlight(4, "bg-gradient-to-br from-yellow-600 to-yellow-700 border-2 sm:border-3 lg:border-4 border-yellow-400 rounded-xl lg:rounded-2xl w-24 sm:w-32 lg:w-40 xl:w-44 h-20 sm:h-24 lg:h-28 xl:h-32 flex flex-col items-center justify-center shadow-2xl relative overflow-hidden transition-all duration-200")}>
               <div className={getTeamBoxClasses(5, "absolute inset-0 rounded-xl lg:rounded-2xl")}></div>
               <div className="absolute inset-1 sm:inset-2 border-2 border-dotted border-yellow-300 rounded-lg lg:rounded-xl"></div>
               <div className="text-white font-bold text-xs sm:text-sm lg:text-base xl:text-lg drop-shadow-lg z-10 mb-1 text-center px-1">
